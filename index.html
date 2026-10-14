@@ -1,85 +1,393 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal Audit Gudang</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+// Nama file: Kode.gs
+
+// ==========================================
+// UPDATE 1: KONFIGURASI FOLDER JSON
+// ==========================================
+var FOLDER_JSON_ID = "1LH4VvP08_mvqZIdBCtmyaY3_q70lbpvm";
+
+function doPost(e) {
+  try {
+    var payload = JSON.parse(e.postData.contents);
+    var action = payload.action;
+    var ssAdmin = SpreadsheetApp.getActiveSpreadsheet();
+
+    // =======================================
+    // OPERASI READ 
+    // =======================================
+
+    if (action === 'verify_pin') {
+      var pinInput = payload.pin.toString().trim();
+      var dataSPV = ssAdmin.getSheetByName("Data_SPV").getDataRange().getValues();
+      var isValid = false;
+      var namaSPV = "";
+      for (var i = 1; i < dataSPV.length; i++) {
+        if (dataSPV[i][1].toString().trim() === pinInput) {
+          isValid = true;
+          namaSPV = dataSPV[i][0].toString();
+          break;
+        }
+      }
+      if (isValid) return responseJSON({ status: "success", nama: namaSPV });
+      return responseJSON({ status: "error", message: "PIN Salah" });
+    }
+
+    if (action === 'get_job_data') {
+       var jobIdInput = payload.jobId.trim();
+       var picInput = payload.pic ? payload.pic.trim() : "";
+       var targetUrl = getUrlByJobId(ssAdmin, jobIdInput);
+       if(!targetUrl) return responseJSON({ status: "error", message: "Job ID tidak ditemukan." });
+       
+       var targetSS = SpreadsheetApp.openByUrl(targetUrl);
+       var cleanMaster = [];
+       var isJsonLoaded = false;
+       
+       // UPDATE 1: BACA MASTER DATA DARI FILE JSON (Jauh Lebih Cepat)
+       try {
+           var folder = DriveApp.getFolderById(FOLDER_JSON_ID);
+           var files = folder.getFilesByName(jobIdInput + "_Master.json");
+           if (files.hasNext()) {
+               var file = files.next();
+               var jsonContent = file.getBlob().getDataAsString();
+               var rawJson = JSON.parse(jsonContent);
+               
+               var keys = Object.keys(rawJson[0]);
+               var keyKode = keys[2]; // Index kolom Kode Barang
+               var keyNama = keys[3]; // Index kolom Nama Barang
+               var keyQty = keys[4];  // Index kolom Target
+               
+               for(var j = 0; j < rawJson.length; j++) {
+                   var kode = rawJson[j][keyKode];
+                   if(kode && kode.toString().trim() !== "") {
+                      cleanMaster.push({ 
+                          kode: kode.toString().replace(/^'/, "").trim(), 
+                          nama: rawJson[j][keyNama] ? rawJson[j][keyNama].toString().trim() : "", 
+                          kuantitas: parseFloat(rawJson[j][keyQty]) || 0 
+                      });
+                   }
+               }
+               isJsonLoaded = true;
+           }
+       } catch(e) {
+           // Lanjut ke metode lambat (Spreadsheet) jika file JSON gagal dibaca
+       }
+
+       // FALLBACK: Baca dari Excel jika file JSON tidak ada
+       if (!isJsonLoaded) {
+           var mData = targetSS.getSheetByName("Master Data").getDataRange().getValues();
+           for(var j = 0; j < mData.length; j++) {
+              if(mData[j][2] && mData[j][2] !== "Kode Barang" && mData[j][2].toString().trim() !== "") {
+                 cleanMaster.push({ 
+                     kode: mData[j][2].toString().replace(/^'/, "").trim(), 
+                     nama: mData[j][3].toString().trim(), 
+                     kuantitas: mData[j][4] || 0 
+                 });
+              }
+           }
+       }
+       
+       var outData = targetSS.getSheetByName("Output").getDataRange().getValues();
+       var cleanHistory = [];
+       var rekapFisik = {}; 
+       
+       for(var k = 1; k < outData.length; k++) {
+           var kodeOut = outData[k][2].toString().trim();
+           var fisikOut = parseFloat(outData[k][5]) || 0;
+           
+           if(!rekapFisik[kodeOut]) rekapFisik[kodeOut] = 0;
+           rekapFisik[kodeOut] += fisikOut; 
+           
+           if(outData[k][1].toString().trim() === picInput) {
+               cleanHistory.push({
+                   waktu: outData[k][0].toString(), pic: outData[k][1].toString(), kode: outData[k][2].toString(),
+                   nama: outData[k][3].toString(), stokSistem: outData[k][4], stokFisik: outData[k][5], id: outData[k][6].toString()
+               });
+           }
+       }
+       cleanHistory.reverse();
+       
+       return responseJSON({ status: "success", master: cleanMaster, history: cleanHistory, rekapFisik: rekapFisik });
+    }
+
+    if (action === 'get_selisih_data') {
+       var targetUrl = getUrlByJobId(ssAdmin, payload.jobId);
+       if(!targetUrl) return responseJSON({ status: "error", message: "Job ID invalid." });
+       
+       var targetSS = SpreadsheetApp.openByUrl(targetUrl);
+       var outData = targetSS.getSheetByName("Output").getDataRange().getValues();
+       var rekapFisik = {};
+       for(var k = 1; k < outData.length; k++) {
+           var kodeOut = outData[k][2].toString().trim();
+           var fisikOut = parseFloat(outData[k][5]) || 0;
+           if(!rekapFisik[kodeOut]) rekapFisik[kodeOut] = 0;
+           rekapFisik[kodeOut] += fisikOut;
+       }
+       
+       var mData = targetSS.getSheetByName("Master Data").getDataRange().getValues();
+       var itemPlus = [], itemMinus = [], itemBelum = [];
+       
+       for(var j = 0; j < mData.length; j++) {
+          if(mData[j][2] && mData[j][2] !== "Kode Barang" && mData[j][2].toString().trim() !== "") {
+             var kode = mData[j][2].toString().replace(/^'/, "").trim();
+             var nama = mData[j][3].toString().trim();
+             var target = parseFloat(mData[j][4]) || 0;
+             var fisik = rekapFisik[kode] || 0;
+             var selisih = fisik - target;
+             
+             var obj = { kode: kode, nama: nama, target: target, fisik: fisik, selisih: selisih };
+             
+             if (fisik === 0 && target > 0) {
+                 itemBelum.push(obj);
+             } else if (selisih > 0) {
+                 itemPlus.push(obj);
+             } else if (selisih < 0) {
+                 itemMinus.push(obj);
+             }
+          }
+       }
+       
+       return responseJSON({ status: "success", plus: itemPlus, minus: itemMinus, belum: itemBelum, rekapFisik: rekapFisik });
+    }
+
+    if (action === 'sync_rekap') {
+       var targetUrl = getUrlByJobId(ssAdmin, payload.jobId);
+       if(!targetUrl) return responseJSON({ status: "error" });
+       
+       var outData = SpreadsheetApp.openByUrl(targetUrl).getSheetByName("Output").getDataRange().getValues();
+       var rekapFisik = {};
+       for(var k = 1; k < outData.length; k++) {
+           var kodeOut = outData[k][2].toString().trim();
+           var fisikOut = parseFloat(outData[k][5]) || 0;
+           if(!rekapFisik[kodeOut]) rekapFisik[kodeOut] = 0;
+           rekapFisik[kodeOut] += fisikOut;
+       }
+       return responseJSON({ status: "success", rekapFisik: rekapFisik });
+    }
+
+    if (action === 'get_global_history_item') {
+       var targetUrl = getUrlByJobId(ssAdmin, payload.jobId);
+       if(!targetUrl) return responseJSON({ status: "error" });
+       
+       var outData = SpreadsheetApp.openByUrl(targetUrl).getSheetByName("Output").getDataRange().getValues();
+       var globalHistory = [];
+       
+       for(var k = 1; k < outData.length; k++) {
+           if(outData[k][2].toString().trim() === payload.kode.toString().trim()) {
+               globalHistory.push({
+                   waktu: outData[k][0].toString(),
+                   pic: outData[k][1].toString(),
+                   kode: outData[k][2].toString(),
+                   nama: outData[k][3].toString(),
+                   stokSistem: outData[k][4],
+                   stokFisik: outData[k][5],
+                   id: outData[k][6].toString()
+               });
+           }
+       }
+       globalHistory.reverse(); 
+       return responseJSON({ status: "success", history: globalHistory });
+    }
+
+    // =======================================
+    // OPERASI WRITE
+    // =======================================
     
-    <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: linear-gradient(135deg, #3db597 0%, #156d53 100%); min-height: 100vh; display: flex; justify-content: center; overflow-x: hidden; }
-        .navbar { width: 100%; background: #156d53; color: white; padding: 15px 20px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-        .navbar h2 { margin: 0; font-size: 18px; }
-        .hamburger { font-size: 24px; cursor: pointer; user-select: none; }
-        .sidebar { height: 100%; width: 300px; position: fixed; z-index: 200; top: 0; left: -300px; background-color: #ffffff; box-shadow: 2px 0 15px rgba(0,0,0,0.3); transition: 0.3s; padding: 20px; box-sizing: border-box; overflow-y: auto; }
-        .sidebar.active { left: 0; }
-        .close-btn { font-size: 24px; cursor: pointer; color: #333; float: right; }
-        .sidebar h3 { color: #156d53; margin-top: 30px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .container { background-color: #ffffff; width: 100%; max-width: 500px; padding: 25px; border-radius: 12px; box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.2); box-sizing: border-box; margin-top: 80px; margin-bottom: 20px; }
-        .form-group { margin-bottom: 15px; }
-        label { font-weight: 600; display: block; margin-bottom: 6px; color: #333; font-size: 14px;}
-        input { width: 100%; padding: 12px; box-sizing: border-box; font-size: 15px; border: 1px solid #ccc; border-radius: 8px; outline: none; transition: 0.3s; }
-        input:focus { border-color: #3db597; }
-        input[readonly] { background-color: #f8f9fa; color: #555; }
-        input:disabled { background-color: #e9ecef; cursor: not-allowed; }
-        button { border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; padding: 12px; font-size: 15px; transition: 0.3s; }
-        button.btn-lock { background-color: #f39c12; color: white; margin-top: 5px; }
-        button.btn-lock.locked { background-color: #27ae60; }
-        button.btn-submit { background-color: #3db597; color: white; margin-top: 10px; padding: 14px; font-size: 16px; }
-        button.btn-submit:disabled { background-color: #ccc; cursor: not-allowed; }
-        button.btn-spv { background-color: #156d53; color: white; margin-top: 10px; }
-        button.btn-toggle-symbol { width: 32px; height: 32px; padding: 0; font-size: 16px; background: #e8f5e9; color: #156d53; float: right; border-radius: 50%; display: flex; align-items: center; justify-content: center; line-height: 1; border: 1px solid #c8e6c9; }
-        button.btn-toggle-symbol:hover { background: #c8e6c9; }
-        
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 150; display: none; }
-        .overlay.active { display: block; }
-        .status-msg { font-size: 13px; font-weight: bold; margin-bottom: 10px; margin-top: -5px; }
-        
-        .histori-container { margin-top: 25px; border-top: 2px dashed #ccc; padding-top: 15px; display: none; }
-        .search-histori-box { margin-bottom: 12px; position: relative; }
-        .search-histori-box input { padding: 9px 12px; font-size: 13px; border-radius: 6px; border: 1px solid #bbb; background-color: #fafafa; }
-        #listHistori { max-height: 260px; overflow-y: auto; padding-right: 5px; }
-        #listHistori::-webkit-scrollbar { width: 5px; }
-        #listHistori::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
-        #listHistori::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
-        
-        .histori-item { background: #f9f9f9; border: 1px solid #ddd; padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-        .histori-detail { font-size: 12px; color: #555; flex: 1; }
-        .histori-detail strong { color: #156d53; display: block; font-size: 13px; line-height: 1.4; word-break: break-word; white-space: normal; margin-bottom: 4px; }
-        .histori-actions { display: flex; flex-direction: row; gap: 5px; flex-shrink: 0; }
-        .btn-edit { background: #f39c12; color: white; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
-        .btn-delete { background: #e74c3c; color: white; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
+    if (action === 'upload_master' || action === 'submit_scan' || action === 'edit_scan' || action === 'delete_scan') {
+        var lock = LockService.getScriptLock();
+        try { lock.waitLock(15000); } catch (e) { return responseJSON({ status: "error", message: "Antrean server penuh." }); }
 
-        details.selisih-box { background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px; padding: 8px 10px; }
-        details.selisih-box summary { font-weight: bold; font-size: 13px; color: #333; cursor: pointer; outline: none; }
-        .selisih-item { font-size: 12px; padding: 8px 0; border-bottom: 1px dashed #ccc; cursor: pointer; color: #156d53; transition: 0.2s; }
-        .selisih-item:hover { font-weight: bold; background-color: #e0f2ec; padding-left: 5px; }
-        .selisih-item:last-child { border-bottom: none; }
+        try {
+            if (action === 'upload_master') {
+              var masterData = payload.data; 
+              var gudangStr = payload.gudang; 
+              var maxCols = 0;
+              for (var c = 0; c < masterData.length; c++) { if (masterData[c].length > maxCols) maxCols = masterData[c].length; }
+              for (var r = 0; r < masterData.length; r++) { while (masterData[r].length < maxCols) masterData[r].push(""); }
+              
+              var tipeGudang = gudangStr.toUpperCase().indexOf("RETAIL") > -1 ? "RETAIL" : "WHOLESALE";
+              var tglSekarang = Utilities.formatDate(new Date(), "GMT+7", "ddMMyy");
+              var jobId = "AUDIT-" + tipeGudang + "-" + tglSekarang + "-" + (Math.floor(Math.random() * 900) + 100);
 
-        .autocomplete-container { position: relative; display: flex; align-items: center; width: 100%; }
-        .autocomplete-items { position: absolute; border: 1px solid #d4d4d4; border-bottom: none; border-top: none; z-index: 99; top: 100%; left: 0; right: 0; max-height: 200px; overflow-y: auto; background-color: #fff; box-shadow: 0px 4px 6px rgba(0,0,0,0.1); border-radius: 0 0 8px 8px; }
-        .autocomplete-items div { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 13px; line-height: 1.4; color: #333; }
-        .btn-flush { position: absolute; right: 12px; font-size: 18px; color: #e74c3c; cursor: pointer; user-select: none; transition: 0.2s; z-index: 10; }
-        .btn-flush:hover { transform: scale(1.2); }
+              var newSS = SpreadsheetApp.create("Laporan " + jobId);
+              var urlSS = newSS.getUrl();
+              var sheetMaster = newSS.getSheets()[0];
+              sheetMaster.setName("Master Data");
+              
+              var sheetOutput = newSS.insertSheet("Output");
+              sheetOutput.appendRow(["Waktu_Scan", "Nama_PIC", "Kode_Barang", "Nama_Barang", "Target_Sistem", "Stok_Fisik", "ID_Cek"]);
+              sheetOutput.setFrozenRows(1);
 
-        .btn-kamera { background: #156d53; color: white; border: none; padding: 0 15px; border-radius: 8px; font-size: 20px; cursor: pointer; flex-shrink: 0; width: 55px; }
-        .scanner-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 300; display: none; align-items: center; justify-content: center; flex-direction: column; }
-        .scanner-content { background: #fff; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; position: relative; text-align: center; }
-        .close-scanner { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: #e74c3c; }
-        #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-top: 10px; }
+              var sheetReko = newSS.insertSheet("Rekonsiliasi");
+              sheetReko.appendRow(["Kode Barang", "Nama Barang", "Target Sistem", "Total Cek Fisik", "Selisih", "Status"]);
+              sheetReko.setFrozenRows(1);
 
-        .queue-status { background-color: #fff3e0; border: 1px solid #ffe0b2; color: #d35400; padding: 6px 10px; font-size: 12px; font-weight: bold; border-radius: 6px; margin-bottom: 15px; display: none; align-items: center; justify-content: space-between; }
-        .queue-status.synced { background-color: #e8f5e9; border: 1px solid #c8e6c9; color: #27ae60; }
-    </style>
-</head>
-<body>
+              var rekoData = [];
+              var rowStartFormula = 2;
+              
+              for (var i = 0; i < masterData.length; i++) {
+                 var rawKode = masterData[i][2] ? masterData[i][2].toString().trim() : "";
+                 
+                 // PROTEKSI ANGKA 0: Tambahkan tanda kutip untuk mengunci teks
+                 if (i > 0 && rawKode !== "") { 
+                     masterData[i][2] = "'" + rawKode; 
+                 }
 
-    <div id="scannerModal" class="scanner-modal">
-        <div class="scanner-content">
-            <span class="close-scanner" onclick="tutupKamera()">✖</span>
-            <h3 style="margin-top:0; color:#156d53; font-size:16px;">Arahkan ke Barcode</h3>
-            <div id="reader"></div>
-            <p style="font-size:12px; color:#666; margin-bottom:0;">Posisikan barcode di dalam kotak transparan.</p>
-        </div>
-    </div>
+                 if (rawKode !== "" && rawKode !== "Kode Barang") {
+                     var nama = masterData[i][3] ? masterData[i][3].toString().trim() : "";
+                     var target = parseFloat(masterData[i][4]) || 0; 
+                     
+                     var fTotalFisik = "=SUMIF(Output!C:C; A" + rowStartFormula + "; Output!F:F)";
+                     var fSelisih = "=D" + rowStartFormula + "-C" + rowStartFormula;
+                     var fStatus = '=IF(D' + rowStartFormula + '=0; "Belum Dihitung"; IF(E' + rowStartFormula + '=0; "Klop"; IF(E' + rowStartFormula + '<0; "Selisih - (Kurang)"; "Selisih + (Lebih)")))';
+                     
+                     rekoData.push(["'" + rawKode, nama, target, fTotalFisik, fSelisih, fStatus]);
+                     rowStartFormula++;
+                 }
+              }
+              
+              sheetMaster.getRange(1, 1, masterData.length, maxCols).setValues(masterData);
+              if(rekoData.length > 0) sheetReko.getRange(2, 1, rekoData.length, 6).setValues(rekoData);
+              
+              // --- UPDATE 1: CETAK JSON SAAT UPLOAD OTOMATIS ---
+              try {
+                  var jsonArray = [];
+                  var header = masterData[0];
+                  for (var idx = 1; idx < masterData.length; idx++) {
+                      var obj = {};
+                      for (var c_idx = 0; c_idx < header.length; c_idx++) {
+                          var val = masterData[idx][c_idx];
+                          // Bersihkan tanda kutip sebelum disimpan ke JSON
+                          if (typeof val === 'string' && val.startsWith("'")) val = val.substring(1);
+                          obj[header[c_idx]] = val;
+                      }
+                      jsonArray.push(obj);
+                  }
+                  var folder = DriveApp.getFolderById(FOLDER_JSON_ID);
+                  folder.createFile(jobId + "_Master.json", JSON.stringify(jsonArray), MimeType.PLAIN_TEXT);
+              } catch(e) {
+                  // Abaikan error pembuatan JSON, aplikasi tetap jalan menggunakan fallback Spreadsheet
+              }
+              // -------------------------------------------------
+
+              ssAdmin.getSheetByName("Log_Audit").appendRow([Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy HH:mm:ss"), jobId, urlSS]);
+              return responseJSON({ status: "success", jobId: jobId, url: urlSS });
+            }
+            
+            if (action === 'submit_scan') {
+               var targetUrl = getUrlByJobId(ssAdmin, payload.jobId);
+               if(!targetUrl) return responseJSON({ status: "error", message: "Job ID invalid." });
+               
+               var targetSS = SpreadsheetApp.openByUrl(targetUrl);
+               var outSheet = targetSS.getSheetByName("Output");
+               
+               // CEK DUPLIKAT (Filter ID Cek)
+               var existingIds = {};
+               var lastRow = outSheet.getLastRow();
+               if (lastRow > 1) {
+                   var idData = outSheet.getRange(2, 7, lastRow - 1, 1).getValues(); // Ambil Kolom G (ID_Cek)
+                   for (var r = 0; r < idData.length; r++) {
+                       if (idData[r][0]) existingIds[idData[r][0].toString()] = true;
+                   }
+               }
+               
+               var scans = payload.scans; 
+               var dataToAppend = [];
+               for(var i=0; i<scans.length; i++) {
+                   // Hanya proses jika ID Cek BELUM ADA di database
+                   if (!existingIds[scans[i].id]) {
+                       // Tambahkan "'" pada kode barang untuk proteksi angka 0
+                       dataToAppend.push([scans[i].waktu, scans[i].pic, "'" + scans[i].kode.toString(), scans[i].nama, scans[i].stokSistem, scans[i].stokFisik, scans[i].id]);
+                   }
+               }
+               
+               if(dataToAppend.length > 0) { 
+                   outSheet.getRange(lastRow + 1, 1, dataToAppend.length, 7).setValues(dataToAppend); 
+               }
+               
+               return responseJSON({ status: "success" });
+            }
+
+            if (action === 'edit_scan' || action === 'delete_scan') {
+               var targetUrl = getUrlByJobId(ssAdmin, payload.jobId);
+               if(!targetUrl) return responseJSON({ status: "error", message: "Job ID invalid." });
+
+               var outSheet = SpreadsheetApp.openByUrl(targetUrl).getSheetByName("Output");
+               var outData = outSheet.getDataRange().getValues();
+               var rowToUpdate = -1;
+               
+               for(var r = 1; r < outData.length; r++) {
+                   if(outData[r][6] == payload.id) { rowToUpdate = r + 1; break; }
+               }
+
+               if(rowToUpdate !== -1) {
+                   if (action === 'delete_scan') {
+                       outSheet.deleteRow(rowToUpdate);
+                   } else {
+                       // Tambahkan "'" pada kode barang untuk proteksi angka 0
+                       outSheet.getRange(rowToUpdate, 1, 1, 7).setValues([[payload.waktu, payload.pic, "'" + payload.kode.toString(), payload.nama, payload.stokSistem, payload.stokFisik, payload.id]]);
+                   }
+                   return responseJSON({ status: "success" });
+               } else { return responseJSON({ status: "error", message: "Data gagal ditemukan." }); }
+            }
+        } finally { lock.releaseLock(); }
+    }
+    return responseJSON({ status: "error", message: "Action tidak dikenal" });
+  } catch (error) { return responseJSON({ status: "error", message: error.toString() }); }
+}
+
+function getUrlByJobId(ssAdmin, jobId) {
+    var dataLog = ssAdmin.getSheetByName("Log_Audit").getDataRange().getValues();
+    for(var i = 1; i < dataLog.length; i++) { if(dataLog[i][1].toString().trim() === jobId.trim()) return dataLog[i][2].toString().trim(); }
+    return null;
+}
+function doGet(e) { return ContentService.createTextOutput("Backend Aktif. Update 1: JSON Cache Terpasang."); }
+function responseJSON(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
+
+
+// ==========================================
+// FUNGSI JEMBATAN PENYELAMAT SPV (JSON)
+// ==========================================
+
+function cetakJSONMaster(jobId) {
+  var ssAdmin = SpreadsheetApp.getActiveSpreadsheet();
+  var targetUrl = getUrlByJobId(ssAdmin, jobId);
+  if(!targetUrl) throw new Error("Job ID tidak ditemukan di log server.");
+  
+  var targetSS = SpreadsheetApp.openByUrl(targetUrl);
+  var sheetMaster = targetSS.getSheetByName("Master Data"); 
+  var data = sheetMaster.getDataRange().getValues();
+  
+  var header = data[0];
+  var jsonArray = [];
+  for (var i = 1; i < data.length; i++) {
+    var obj = {};
+    for (var j = 0; j < header.length; j++) {
+      var val = data[i][j];
+      // Bersihkan proteksi kutip jika ada
+      if (typeof val === 'string' && val.startsWith("'")) val = val.substring(1);
+      obj[header[j]] = val;
+    }
+    jsonArray.push(obj);
+  }
+  
+  var jsonString = JSON.stringify(jsonArray);
+  var folder = DriveApp.getFolderById(FOLDER_JSON_ID);
+  
+  // Hapus JSON lama
+  var files = folder.getFilesByName(jobId + "_Master.json");
+  while (files.hasNext()) {
+    files.next().setTrashed(true);
+  }
+  
+  // Buat JSON baru
+  var fileBaru = folder.createFile(jobId + "_Master.json", jsonString, MimeType.PLAIN_TEXT);
+  return "https://drive.google.com/uc?export=download&id=" + fileBaru.getId();
+}
+
+function spvSinkronisasiUlang(jobId) {
+  try {
+    var linkBaru = cetakJSONMaster(jobId);
+    return { status: "sukses", pesan: "Data JSON berhasil ditimpa dengan Excel terbaru!", link: linkBaru };
+  } catch (e) {
+    return { status: "gagal", pesan: e.message };
+  }
+}
