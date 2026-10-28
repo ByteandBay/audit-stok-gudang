@@ -2,208 +2,593 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Portal Audit Gudang</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: linear-gradient(135deg, #3db597 0%, #156d53 100%); min-height: 100vh; display: flex; justify-content: center; overflow-x: hidden; }
-        .navbar { width: 100%; background: #156d53; color: white; padding: 15px 20px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-        .navbar h2 { margin: 0; font-size: 18px; }
-        .hamburger { font-size: 24px; cursor: pointer; user-select: none; }
-        .sidebar { height: 100%; width: 300px; position: fixed; z-index: 200; top: 0; left: -300px; background-color: #ffffff; box-shadow: 2px 0 15px rgba(0,0,0,0.3); transition: 0.3s; padding: 20px; box-sizing: border-box; overflow-y: auto; }
-        .sidebar.active { left: 0; }
-        .close-btn { font-size: 24px; cursor: pointer; color: #333; float: right; }
-        .sidebar h3 { color: #156d53; margin-top: 30px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .container { background-color: #ffffff; width: 100%; max-width: 500px; padding: 25px; border-radius: 12px; box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.2); box-sizing: border-box; margin-top: 80px; margin-bottom: 20px; }
-        .form-group { margin-bottom: 15px; }
-        label { font-weight: 600; display: block; margin-bottom: 6px; color: #333; font-size: 14px;}
-        input { width: 100%; padding: 12px; box-sizing: border-box; font-size: 15px; border: 1px solid #ccc; border-radius: 8px; outline: none; transition: 0.3s; }
-        input:focus { border-color: #3db597; }
-        input[readonly] { background-color: #f8f9fa; color: #555; }
-        input:disabled { background-color: #e9ecef; cursor: not-allowed; }
-        button { border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; padding: 12px; font-size: 15px; transition: 0.3s; }
-        button.btn-lock { background-color: #f39c12; color: white; margin-top: 5px; }
-        button.btn-lock.locked { background-color: #27ae60; }
-        button.btn-submit { background-color: #3db597; color: white; margin-top: 10px; padding: 14px; font-size: 16px; }
-        button.btn-submit:disabled { background-color: #ccc; cursor: not-allowed; }
-        button.btn-spv { background-color: #156d53; color: white; margin-top: 10px; }
-        button.btn-toggle-symbol { width: 32px; height: 32px; padding: 0; font-size: 16px; background: #e8f5e9; color: #156d53; float: right; border-radius: 50%; display: flex; align-items: center; justify-content: center; line-height: 1; border: 1px solid #c8e6c9; }
-        button.btn-toggle-symbol:hover { background: #c8e6c9; }
-        
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 150; display: none; }
+        :root {
+            --primary: #0f5132;
+            --primary-light: #198754;
+            --primary-soft: #e8f5e9;
+            --accent: #d97706;
+            --accent-soft: #fef3c7;
+            --danger: #dc2626;
+            --danger-soft: #fee2e2;
+            --bg-body: #f1f5f9;
+            --surface: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --radius: 10px;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            overflow-x: hidden;
+        }
+
+        /* Navbar */
+        .navbar {
+            width: 100%;
+            background: var(--primary);
+            color: #ffffff;
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+        }
+        .navbar h2 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: 0.3px; }
+        .btn-icon-nav {
+            background: rgba(255, 255, 255, 0.12);
+            border: none;
+            color: #ffffff;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+        }
+        .btn-icon-nav:hover { background: rgba(255, 255, 255, 0.22); }
+
+        /* Sidebar */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(2px);
+            z-index: 150;
+            display: none;
+        }
         .overlay.active { display: block; }
-        .status-msg { font-size: 13px; font-weight: bold; margin-bottom: 10px; margin-top: -5px; }
-        
-        .histori-container { margin-top: 25px; border-top: 2px dashed #ccc; padding-top: 15px; display: none; }
-        .search-histori-box { margin-bottom: 12px; position: relative; }
-        .search-histori-box input { padding: 9px 12px; font-size: 13px; border-radius: 6px; border: 1px solid #bbb; background-color: #fafafa; }
-        #listHistori { max-height: 260px; overflow-y: auto; padding-right: 5px; }
-        #listHistori::-webkit-scrollbar { width: 5px; }
-        #listHistori::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
-        #listHistori::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
-        
-        .histori-item { background: #f9f9f9; border: 1px solid #ddd; padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-        .histori-detail { font-size: 12px; color: #555; flex: 1; }
-        .histori-detail strong { color: #156d53; display: block; font-size: 13px; line-height: 1.4; word-break: break-word; white-space: normal; margin-bottom: 4px; }
-        .histori-actions { display: flex; flex-direction: row; gap: 5px; flex-shrink: 0; }
-        .btn-edit { background: #f39c12; color: white; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
-        .btn-delete { background: #e74c3c; color: white; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
+        .sidebar {
+            height: 100%;
+            width: 320px;
+            max-width: 85vw;
+            position: fixed;
+            z-index: 200;
+            top: 0;
+            left: -340px;
+            background-color: var(--surface);
+            box-shadow: 4px 0 24px rgba(15, 23, 42, 0.18);
+            transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .sidebar.active { left: 0; }
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+        .sidebar-header h3 { margin: 0; font-size: 15px; color: var(--primary); font-weight: 700; }
+        .btn-close {
+            background: #f1f5f9;
+            border: none;
+            color: var(--text-main);
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin: 20px 0 10px 0;
+        }
 
-        details.selisih-box { background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px; padding: 8px 10px; }
-        details.selisih-box summary { font-weight: bold; font-size: 13px; color: #333; cursor: pointer; outline: none; }
-        .selisih-item { font-size: 12px; padding: 8px 0; border-bottom: 1px dashed #ccc; cursor: pointer; color: #156d53; transition: 0.2s; }
-        .selisih-item:hover { font-weight: bold; background-color: #e0f2ec; padding-left: 5px; }
-        .selisih-item:last-child { border-bottom: none; }
+        /* Main Container */
+        .container {
+            width: 100%;
+            max-width: 520px;
+            padding: 16px;
+            margin-top: 64px;
+            margin-bottom: 24px;
+        }
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid #e2e8f0;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .card-header.collapsed { margin-bottom: 0; }
+        .card-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin: 0;
+        }
 
+        /* Form Controls */
+        .form-group { margin-bottom: 14px; }
+        label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-main);
+            font-size: 13px;
+        }
+        input {
+            width: 100%;
+            padding: 11px 12px;
+            font-size: 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            outline: none;
+            color: var(--text-main);
+            background: var(--surface);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input:focus {
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.15);
+        }
+        input[readonly] { background-color: #f8fafc; color: var(--text-muted); }
+        input:disabled { background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+
+        /* Buttons */
+        button {
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+            padding: 12px;
+            font-size: 14px;
+            transition: opacity 0.2s, background-color 0.2s, transform 0.05s;
+        }
+        button:active:not(:disabled) { transform: scale(0.99); }
+        button:disabled { opacity: 0.55; cursor: not-allowed; }
+        .btn-primary { background-color: var(--primary-light); color: #ffffff; }
+        .btn-primary:hover:not(:disabled) { background-color: var(--primary); }
+        .btn-warning { background-color: var(--accent); color: #ffffff; }
+        .btn-dark { background-color: var(--primary); color: #ffffff; }
+        .btn-toggle {
+            width: auto;
+            padding: 4px 10px;
+            font-size: 12px;
+            background: #f1f5f9;
+            color: var(--text-muted);
+            border-radius: 6px;
+        }
+
+        /* Status & Queue Bar */
+        .queue-bar {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            background: var(--accent-soft);
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        .queue-bar.synced {
+            background: var(--primary-soft);
+            color: var(--primary);
+            border-color: #bbf7d0;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent);
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .queue-bar.synced .status-dot { background-color: var(--primary-light); }
+        .btn-force-sync {
+            width: auto;
+            padding: 4px 10px;
+            font-size: 11px;
+            background: rgba(15, 23, 42, 0.08);
+            color: inherit;
+            border-radius: 5px;
+        }
+
+        .status-msg {
+            font-size: 12px;
+            font-weight: 600;
+            margin: 8px 0 0 0;
+            min-height: 18px;
+        }
+        .text-success { color: var(--primary-light); }
+        .text-warning { color: var(--accent); }
+        .text-danger { color: var(--danger); }
+
+        /* Input Row & Autocomplete */
+        .input-group-row { display: flex; gap: 8px; }
+        .btn-icon-only {
+            width: 46px;
+            flex-shrink: 0;
+            background: var(--primary);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
         .autocomplete-container { position: relative; display: flex; align-items: center; width: 100%; }
-        .autocomplete-items { position: absolute; border: 1px solid #d4d4d4; border-bottom: none; border-top: none; z-index: 99; top: 100%; left: 0; right: 0; max-height: 200px; overflow-y: auto; background-color: #fff; box-shadow: 0px 4px 6px rgba(0,0,0,0.1); border-radius: 0 0 8px 8px; }
-        .autocomplete-items div { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 13px; line-height: 1.4; color: #333; }
-        .btn-flush { position: absolute; right: 12px; font-size: 18px; color: #e74c3c; cursor: pointer; user-select: none; transition: 0.2s; z-index: 10; }
-        .btn-flush:hover { transform: scale(1.2); }
+        .btn-clear-input {
+            position: absolute;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            background: #f1f5f9;
+            color: var(--text-muted);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+        }
+        .btn-clear-input:hover { background: var(--danger-soft); color: var(--danger); }
+        .autocomplete-items {
+            position: absolute;
+            border: 1px solid var(--border);
+            z-index: 99;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            max-height: 220px;
+            overflow-y: auto;
+            background-color: var(--surface);
+            box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.1);
+            border-radius: 8px;
+        }
+        .autocomplete-items div {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+            color: var(--text-main);
+        }
+        .autocomplete-items div:hover { background-color: var(--primary-soft); }
 
-        .btn-kamera { background: #156d53; color: white; border: none; padding: 0 15px; border-radius: 8px; font-size: 20px; cursor: pointer; flex-shrink: 0; width: 55px; }
-        .scanner-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 300; display: none; align-items: center; justify-content: center; flex-direction: column; }
-        .scanner-content { background: #fff; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; position: relative; text-align: center; }
-        .close-scanner { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: #e74c3c; }
-        #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-top: 10px; }
+        /* Grid Info Stok */
+        .stock-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .stock-grid .form-group { margin-bottom: 0; }
+        #sisaTarget {
+            font-weight: 700;
+            color: var(--accent);
+            background: var(--accent-soft);
+            border-color: #fde68a;
+        }
+        #stokFisik {
+            font-weight: 700;
+            font-size: 16px;
+        }
 
-        .queue-status { background-color: #fff3e0; border: 1px solid #ffe0b2; color: #d35400; padding: 6px 10px; font-size: 12px; font-weight: bold; border-radius: 6px; margin-bottom: 15px; display: none; align-items: center; justify-content: space-between; }
-        .queue-status.synced { background-color: #e8f5e9; border: 1px solid #c8e6c9; color: #27ae60; }
+        /* Histori */
+        .histori-container { display: none; }
+        .search-histori-box { margin-bottom: 10px; }
+        .search-histori-box input { padding: 9px 12px; font-size: 13px; background: #f8fafc; }
+        #listHistori { max-height: 280px; overflow-y: auto; padding-right: 4px; }
+        .histori-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .histori-detail { font-size: 12px; color: var(--text-muted); flex: 1; }
+        .histori-detail strong {
+            color: var(--text-main);
+            display: block;
+            font-size: 13px;
+            margin-bottom: 3px;
+            word-break: break-word;
+        }
+        .badge-qty {
+            display: inline-block;
+            background: var(--accent-soft);
+            color: #92400e;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        .histori-actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .btn-sm { width: auto; padding: 6px 10px; font-size: 12px; border-radius: 6px; }
+        .btn-edit { background: #fef3c7; color: #b45309; }
+        .btn-delete { background: var(--danger-soft); color: var(--danger); }
+
+        /* Selisih Accordion */
+        details.selisih-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            padding: 10px 12px;
+        }
+        details.selisih-box summary {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-main);
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .badge-count {
+            background: #e2e8f0;
+            color: var(--text-main);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .selisih-item {
+            font-size: 12px;
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--border);
+            cursor: pointer;
+            color: var(--primary);
+        }
+        .selisih-item:first-child { margin-top: 8px; border-top: 1px solid #e2e8f0; }
+        .selisih-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .selisih-item:hover { background-color: var(--primary-soft); padding-left: 6px; border-radius: 4px; }
+
+        /* Scanner Modal */
+        .scanner-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.85);
+            z-index: 300;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .scanner-content {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+            position: relative;
+            text-align: center;
+        }
+        #reader { width: 100%; border-radius: 8px; overflow: hidden; margin: 12px 0; }
     </style>
 </head>
 <body>
 
+    <!-- Modal Kamera Barcode -->
     <div id="scannerModal" class="scanner-modal">
         <div class="scanner-content">
-            <span class="close-scanner" onclick="tutupKamera()">✖</span>
-            <h3 style="margin-top:0; color:#156d53; font-size:16px;">Arahkan ke Barcode</h3>
+            <div class="card-header" style="margin-bottom: 8px;">
+                <h3 class="card-title">Pemindai Barcode</h3>
+                <button class="btn-close" onclick="tutupKamera()" aria-label="Tutup">X</button>
+            </div>
             <div id="reader"></div>
-            <p style="font-size:12px; color:#666; margin-bottom:0;">Posisikan barcode di dalam kotak transparan.</p>
+            <p style="font-size:12px; color:var(--text-muted); margin:0;">Arahkan kamera ke barcode barang hingga terbaca otomatis.</p>
         </div>
     </div>
 
+    <!-- Top Navbar (Ikon Menu Saja Tanpa Teks Redundan) -->
     <div class="navbar">
-        <div class="hamburger" onclick="toggleSidebar()">☰</div>
+        <button class="btn-icon-nav" onclick="toggleSidebar()" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
         <h2>Portal Audit Gudang</h2>
-        <div></div>
+        <div style="width: 36px;"></div>
     </div>
+
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
+    <!-- Sidebar Menu Staff & SPV -->
     <div class="sidebar" id="sidebar">
-        <span class="close-btn" onclick="toggleSidebar()">✖</span>
+        <div class="sidebar-header">
+            <h3>Panel Kontrol & Selisih</h3>
+            <button class="btn-close" onclick="toggleSidebar()">X</button>
+        </div>
         
-        <h3 style="margin-top: 10px;">Menu Staff</h3>
-        <p style="margin-top:-5px;">Tarik data dari Job ID yang terkunci di layar utama.</p>
-        <button id="btnMuatSelisih" class="btn-spv" style="background:#f39c12; color:white; margin-top:0;" onclick="muatDataSelisih()">🔄 Sync & Cek Item Selisih</button>
+        <div class="section-title" style="margin-top:0;">Menu Staff</div>
+        <p style="font-size:12px; color:var(--text-muted); margin-top:0;">Tarik data selisih terbaru dari Job ID yang aktif.</p>
+        <button id="btnMuatSelisih" class="btn-warning" onclick="muatDataSelisih()">Sinkronisasi & Cek Selisih</button>
         
-        <div id="areaSelisih" style="display:none; margin-top:15px;">
+        <div id="areaSelisih" style="display:none; margin-top:14px;">
             <details class="selisih-box">
-                <summary>➕ Item Plus (Lebih) [<span id="cntPlus">0</span>]</summary>
+                <summary><span>Item Lebih (Plus)</span> <span class="badge-count" id="cntPlus">0</span></summary>
                 <div id="listPlus"></div>
             </details>
             <details class="selisih-box">
-                <summary>➖ Item Minus (Kurang) [<span id="cntMinus">0</span>]</summary>
+                <summary><span>Item Kurang (Minus)</span> <span class="badge-count" id="cntMinus">0</span></summary>
                 <div id="listMinus"></div>
             </details>
             <details class="selisih-box">
-                <summary>❓ Belum Dihitung [<span id="cntBelum">0</span>]</summary>
+                <summary><span>Belum Dihitung</span> <span class="badge-count" id="cntBelum">0</span></summary>
                 <div id="listBelum"></div>
             </details>
         </div>
 
-        <hr style="border-top: 1px solid #eee; margin: 25px 0;">
-
-        <h3>Panel SPV (Upload Data)</h3>
+        <div class="section-title">Panel Supervisor (SPV)</div>
         <div id="spvPinArea">
-            <input type="password" id="spvPin" placeholder="Ketik PIN SPV..." class="form-group" style="width:100%; padding:12px; box-sizing:border-box;">
-            <button class="btn-spv" onclick="verifikasiPIN()">Buka Akses</button>
+            <div class="form-group">
+                <input type="password" id="spvPin" placeholder="Masukkan PIN SPV" onkeypress="if(event.key==='Enter') verifikasiPIN()">
+            </div>
+            <button class="btn-dark" onclick="verifikasiPIN()">Buka Akses SPV</button>
             <p id="pinStatus" class="status-msg"></p>
         </div>
+
         <div id="spvUploadArea" style="display: none;">
-            <p>Selamat datang, <strong id="namaSPVText"></strong>.</p>
-            <input type="file" id="fileExcel" accept=".xlsx, .xls" class="form-group" style="width:100%;">
-            <button class="btn-spv" onclick="prosesUpload()">Upload & Generate</button>
-            <p id="uploadStatus" class="status-msg" style="margin-top: 10px;"></p>
-            <div id="spvResultArea" style="display: none; background: #e0f2ec; padding:10px; border-radius:8px; margin-top:10px; word-break:break-all;">
-                Job ID: <br><strong id="resultJobId" style="font-size:18px; color:#156d53;"></strong><br>
-                <a href="#" id="resultUrl" target="_blank" style="color:#156d53; font-size:12px;">Buka Spreadsheet Laporan</a>
+            <p style="font-size:13px; margin-top:0;">Supervisor Aktif: <strong id="namaSPVText"></strong></p>
+            <div class="form-group">
+                <label>File Master Excel (.xlsx / .xls)</label>
+                <input type="file" id="fileExcel" accept=".xlsx, .xls">
+            </div>
+            <button class="btn-dark" onclick="prosesUpload()">Upload & Buat Job ID</button>
+            <p id="uploadStatus" class="status-msg"></p>
+
+            <div id="spvResultArea" style="display: none; background: var(--primary-soft); padding:12px; border-radius:8px; margin-top:10px; word-break:break-all;">
+                <span style="font-size:11px; color:var(--text-muted);">Job ID Berhasil Dibuat:</span><br>
+                <strong id="resultJobId" style="font-size:16px; color:var(--primary);"></strong><br>
+                <a href="#" id="resultUrl" target="_blank" style="color:var(--primary-light); font-size:12px; font-weight:600;">Buka Spreadsheet Laporan</a>
             </div>
             
-            <!-- UPDATE 1: PENAMBAHAN PANEL SINKRONISASI JSON SPV DI DALAM SIDEBAR -->
-            <div id="panel-spv-json" style="border: 1px dashed #f39c12; padding: 15px; margin-top: 20px; border-radius: 8px;">
-              <h4 style="color: #d35400; margin-top: 0; margin-bottom: 5px;">Panel Darurat SPV (JSON)</h4>
-              <p style="font-size: 11px; color: gray; margin-top: 0;">Gunakan jika ada revisi data "Master Data" di Excel saat tim lapangan sedang scan.</p>
-              <input type="text" id="inputJobIdSPV" placeholder="Ketik Job ID Revisi" style="padding: 8px; margin-bottom: 10px; font-size: 13px;">
-              <button onclick="updateJSON()" style="background-color: #ff9800; color: white; padding: 10px; font-size: 13px;">🔄 Update & Timpa JSON</button>
-              <p id="statusSPV" style="margin-top: 10px; font-weight: bold; font-size: 12px;"></p>
+            <div id="panel-spv-json" style="border: 1px dashed var(--accent); padding: 12px; margin-top: 16px; border-radius: 8px; background: #fffbeb;">
+                <h4 style="color: #92400e; margin: 0 0 4px 0; font-size: 13px;">Sinkronisasi Ulang Master JSON</h4>
+                <p style="font-size: 11px; color: var(--text-muted); margin: 0 0 10px 0;">Gunakan jika ada revisi Master Data di Spreadsheet saat tim sedang melakukan scan.</p>
+                <input type="text" id="inputJobIdSPV" placeholder="Ketik Job ID Revisi" style="margin-bottom: 8px; font-size: 13px; text-transform: uppercase;">
+                <button class="btn-warning" onclick="updateJSON()" style="padding: 9px; font-size: 13px;">Perbarui Master JSON</button>
+                <p id="statusSPV" class="status-msg"></p>
             </div>
-            <!-- AKHIR UPDATE 1 PANEL -->
-
         </div>
     </div>
 
+    <!-- Konten Utama -->
     <div class="container">
         
-        <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <label style="color: #d35400; margin: 0;">1. Kunci Sesi Audit</label>
-                <button id="btnToggleSymbol" class="btn-toggle-symbol" onclick="toggleSesiBox()" title="Sembunyikan/Tampilkan">∧</button>
+        <!-- Kartu 1: Kunci Sesi -->
+        <div class="card">
+            <div class="card-header" id="headerSesi">
+                <h3 class="card-title">1. Sesi Audit</h3>
+                <button id="btnToggleSymbol" class="btn-toggle" onclick="toggleSesiBox()">Sembunyikan</button>
             </div>
             
             <div id="boxSesi">
-                <input type="text" id="jobIdStaff" placeholder="Job ID (AUDIT-...)" style="text-transform: uppercase; margin-bottom: 10px;">
-                <input type="text" id="picStaff" placeholder="Nama PIC / Tim Anda" style="margin-bottom: 10px;">
-                <button id="btnLock" class="btn-lock" onclick="kunciSesi()">🔒 Tarik Data & Kunci</button>
-                <p id="lockStatus" class="status-msg" style="margin-top: 10px;"></p>
+                <div class="form-group">
+                    <label>Job ID Audit</label>
+                    <input type="text" id="jobIdStaff" placeholder="Contoh: AUDIT-RETAIL-..." style="text-transform: uppercase;">
+                </div>
+                <div class="form-group">
+                    <label>Nama PIC / Tim</label>
+                    <input type="text" id="picStaff" placeholder="Ketik nama Anda" onkeypress="if(event.key==='Enter') kunciSesi()">
+                </div>
+                <button id="btnLock" class="btn-warning" onclick="kunciSesi()">Tarik Data & Kunci Sesi</button>
+                <p id="lockStatus" class="status-msg"></p>
             </div>
-            <p id="sesiRingkas" style="display:none; font-size:13px; font-weight:bold; color:#27ae60; margin:0;">✅ Sesi Terkunci.</p>
+            <p id="sesiRingkas" style="display:none; font-size:12px; font-weight:600; color:var(--primary-light); margin:0;"></p>
         </div>
 
-        <div id="queueStatusBox" class="queue-status">
-            <span id="queueText">☁️ 0 data tertunda (Server Syncing)</span>
-            <span id="queueLoader" style="font-size: 14px;"></span>
+        <!-- Bar Indikator Antrean Cloud -->
+        <div id="queueStatusBox" class="queue-bar">
+            <div style="display:flex; align-items:center;">
+                <span class="status-dot"></span>
+                <span id="queueText">Menunggu sinkronisasi...</span>
+            </div>
+            <button class="btn-force-sync" onclick="prosesAntreanSiluman(true)">Kirim Sekarang</button>
         </div>
 
-        <div id="areaScan" style="opacity: 0.4; pointer-events: none;">
+        <!-- Kartu 2: Input Scan Fisik -->
+        <div class="card" id="areaScan" style="opacity: 0.45; pointer-events: none;">
+            <div class="card-header">
+                <h3 class="card-title">2. Input Stok Fisik</h3>
+            </div>
+
             <div class="form-group">
-                <label>2. Scan Barcode Barang:</label>
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" id="kodeBarang" placeholder="Scan Fisik..." onkeypress="handleEnterScan(event)" onchange="pencarianBarcode()" style="flex: 1;">
-                    <button class="btn-kamera" onclick="bukaKamera()" title="Scan pakai Kamera HP">📷</button>
+                <label>Barcode Barang</label>
+                <div class="input-group-row">
+                    <input type="text" id="kodeBarang" placeholder="Scan atau ketik kode barcode..." onkeypress="handleEnterScan(event)" onchange="pencarianBarcode()">
+                    <!-- Hanya Ikon Kamera (Tanpa Teks Redundan) -->
+                    <button class="btn-icon-only" onclick="bukaKamera()" title="Buka Kamera Barcode" aria-label="Kamera">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    </button>
                 </div>
             </div>
             
             <div class="form-group">
-                <label>Atau Ketik Nama Barang (Pilih dari List):</label>
+                <label>Nama Barang</label>
                 <div class="autocomplete-container">
-                    <input type="text" id="namaBarang" placeholder="Ketik nama barang..." oninput="jalankanAutocomplete(this.value)" autocomplete="off" style="padding-right: 35px;">
-                    <span class="btn-flush" onclick="flushForm()" title="Bersihkan Input">⛒</span>
+                    <input type="text" id="namaBarang" placeholder="Ketik untuk mencari nama barang..." oninput="jalankanAutocomplete(this.value)" autocomplete="off" style="padding-right: 40px;">
+                    <!-- Hanya Ikon Bersihkan (Tanpa Teks Redundan) -->
+                    <button type="button" class="btn-clear-input" onclick="flushForm()" title="Bersihkan Kolom" aria-label="Bersihkan">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
                     <div id="autocompleteList" class="autocomplete-items"></div>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label style="color:#d35400;">Sisa Target (Kurangan Fisik):</label>
-                <input type="number" id="sisaTarget" readonly placeholder="0" style="font-weight:bold; color:#d35400; background:#fff3e0;">
+            <div class="stock-grid">
+                <div class="form-group">
+                    <label>Sisa Target Sistem</label>
+                    <input type="number" id="sisaTarget" readonly placeholder="0" tabindex="-1">
+                </div>
+                <div class="form-group">
+                    <label>Stok Fisik Ditemukan</label>
+                    <input type="number" id="stokFisik" placeholder="Jumlah..." step="any" onkeypress="handleEnterFisik(event)">
+                </div>
             </div>
-            <div class="form-group">
-                <label>Stok Fisik Ditemukan:</label>
-                <input type="number" id="stokFisik" placeholder="Ketik jumlah fisik...">
-            </div>
+
+            <button id="btnSubmit" class="btn-primary" onclick="prosesSimpanData()" disabled>Simpan Data Fisik</button>
             <p id="statusScan" class="status-msg"></p>
-            <button id="btnSubmit" class="btn-submit" onclick="prosesSimpanData()">Kirim Data Fisik</button>
         </div>
 
-        <div class="histori-container" id="areaHistori">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <h3 id="historiTitle" style="margin: 0; font-size: 15px; color: #333;">Histori Input Sesi Ini</h3>
-                <button id="btnToggleHistori" class="btn-toggle-symbol" onclick="toggleHistoriBox()" title="Sembunyikan/Tampilkan">∧</button>
+        <!-- Kartu 3: Histori Input -->
+        <div class="card histori-container" id="areaHistori">
+            <div class="card-header" id="headerHistori">
+                <h3 class="card-title" id="historiTitle">Histori Input Sesi Ini</h3>
+                <button id="btnToggleHistori" class="btn-toggle" onclick="toggleHistoriBox()">Sembunyikan</button>
             </div>
             <div id="boxHistori">
                 <div class="search-histori-box">
-                    <input type="text" id="cariHistori" placeholder="🔍 Cari nama barang / barcode di histori..." oninput="filterHistori()">
+                    <input type="text" id="cariHistori" placeholder="Filter nama barang atau barcode..." oninput="filterHistori()">
                 </div>
                 <div id="listHistori"></div>
             </div>
@@ -212,76 +597,163 @@
 
     <script>
         const URL_GAS = "https://script.google.com/macros/s/AKfycbxpNBRGUpKqmurfoOi3EWHA7E8WB62hiZqkjN7Vj7nZopKycIJ7APHSMBmFVvx2NSUj-Q/exec";
+        
         let editModeId = null;
-        let autoSyncTimer;
-        let html5QrCode;
+        let editOriginalPic = null;
+        let globalHistoryView = null;
+        
+        let queueSyncTimer = null;
+        let rekapSyncTimer = null;
         let isSyncingQueue = false; 
         let isSyncingRekap = false;
-        
-        // Variabel penampung fitur baru
-        let globalHistoryView = null; 
-        let editOriginalPic = null;
+        let html5QrCode = null;
+        let inFlightIds = new Set(); // Pelindung anti-race condition saat sinkronisasi berjalan
+
+        // Generator ID Unik Anti-Tabrakan untuk 20+ User Bersamaan
+        function buatIdUnik(pic) {
+            const cleanPic = (pic || "USR").replace(/[^a-zA-Z0-9]/g, "").substring(0, 4).toUpperCase();
+            const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
+            return `ID-${Date.now()}-${cleanPic}-${rand}`;
+        }
+
+        // Helper Fetch Aman untuk Google Apps Script (Menghindari CORS Preflight & Mendukung Timeout)
+        async function postGAS(payload, timeoutMs = 25000) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const res = await fetch(URL_GAS, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                });
+                clearTimeout(timer);
+                return await res.json();
+            } catch (err) {
+                clearTimeout(timer);
+                throw err;
+            }
+        }
+
+        function setStatusMsg(elId, msg, type = "muted") {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            el.innerText = msg;
+            el.className = "status-msg";
+            if (type === "success") el.classList.add("text-success");
+            else if (type === "warning") el.classList.add("text-warning");
+            else if (type === "danger") el.classList.add("text-danger");
+        }
 
         function bukaKamera() {
             document.getElementById('scannerModal').style.display = "flex";
             if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
             html5QrCode.start(
                 { facingMode: "environment" }, 
-                { fps: 10, qrbox: { width: 250, height: 120 }, aspectRatio: 1.0 },
-                (decodedText, decodedResult) => { tutupKamera(); document.getElementById('kodeBarang').value = decodedText; pencarianBarcode(); },
-                (errorMessage) => { }
-            ).catch((err) => { alert("Gagal mengakses kamera."); tutupKamera(); });
+                { fps: 12, qrbox: { width: 250, height: 120 }, aspectRatio: 1.0 },
+                (decodedText) => {
+                    tutupKamera();
+                    document.getElementById('kodeBarang').value = decodedText;
+                    pencarianBarcode();
+                },
+                () => {}
+            ).catch(() => {
+                alert("Gagal mengakses kamera perangkat.");
+                tutupKamera();
+            });
         }
 
         function tutupKamera() {
             document.getElementById('scannerModal').style.display = "none";
-            if (html5QrCode) html5QrCode.stop().then((ignore) => {}).catch((err) => {});
+            if (html5QrCode) {
+                html5QrCode.stop().catch(() => {});
+            }
         }
 
-        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); document.getElementById('overlay').classList.toggle('active'); }
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('overlay').classList.toggle('active');
+        }
 
         function toggleSesiBox() {
-            let box = document.getElementById('boxSesi'); let ringkas = document.getElementById('sesiRingkas'); let btnSymbol = document.getElementById('btnToggleSymbol'); let isLocked = document.getElementById('btnLock').disabled;
-            if (box.style.display === "none") { box.style.display = "block"; ringkas.style.display = "none"; btnSymbol.innerText = "∧"; } 
-            else { box.style.display = "none"; if(isLocked) ringkas.style.display = "block"; btnSymbol.innerText = "∨"; }
+            const box = document.getElementById('boxSesi');
+            const ringkas = document.getElementById('sesiRingkas');
+            const btn = document.getElementById('btnToggleSymbol');
+            const header = document.getElementById('headerSesi');
+            const isLocked = document.getElementById('btnLock').disabled;
+
+            if (box.style.display === "none") {
+                box.style.display = "block";
+                ringkas.style.display = "none";
+                header.classList.remove('collapsed');
+                btn.innerText = "Sembunyikan";
+            } else {
+                box.style.display = "none";
+                if (isLocked) {
+                    const jobId = document.getElementById('jobIdStaff').value.toUpperCase();
+                    const pic = document.getElementById('picStaff').value;
+                    ringkas.innerText = `Sesi Aktif: ${jobId} (${pic})`;
+                    ringkas.style.display = "block";
+                } else {
+                    header.classList.add('collapsed');
+                }
+                btn.innerText = "Tampilkan";
+            }
         }
 
         function toggleHistoriBox() {
-            let box = document.getElementById('boxHistori'); let btnSymbol = document.getElementById('btnToggleHistori');
-            if (box.style.display === "none") { box.style.display = "block"; btnSymbol.innerText = "∧"; } 
-            else { box.style.display = "none"; btnSymbol.innerText = "∨"; }
+            const box = document.getElementById('boxHistori');
+            const btn = document.getElementById('btnToggleHistori');
+            const header = document.getElementById('headerHistori');
+            if (box.style.display === "none") {
+                box.style.display = "block";
+                header.classList.remove('collapsed');
+                btn.innerText = "Sembunyikan";
+            } else {
+                box.style.display = "none";
+                header.classList.add('collapsed');
+                btn.innerText = "Tampilkan";
+            }
         }
 
         async function muatDataSelisih() {
-            let jobId = document.getElementById('jobIdStaff').value.toUpperCase();
-            let isLocked = document.getElementById('btnLock').disabled;
-            if(!isLocked || !jobId) return alert("Kunci Job ID terlebih dahulu di layar utama.");
+            const jobId = document.getElementById('jobIdStaff').value.trim().toUpperCase();
+            const isLocked = document.getElementById('btnLock').disabled;
+            if (!isLocked || !jobId) return alert("Kunci Job ID terlebih dahulu di layar utama.");
             
-            let btn = document.getElementById('btnMuatSelisih');
-            btn.innerText = "Syncing...";
+            const btn = document.getElementById('btnMuatSelisih');
+            btn.disabled = true;
+            btn.innerText = "Memuat Data Selisih...";
             
             try {
-                let res = await fetch(URL_GAS, { method: 'POST', body: JSON.stringify({ action: 'get_selisih_data', jobId: jobId }) });
-                let result = await res.json();
-                if(result.status === 'success') {
+                const result = await postGAS({ action: 'get_selisih_data', jobId: jobId });
+                if (result.status === 'success') {
                     localStorage.setItem('rekapFisik_' + jobId, JSON.stringify(result.rekapFisik));
                     document.getElementById('areaSelisih').style.display = 'block';
                     renderSelisihKategori('listPlus', 'cntPlus', result.plus);
                     renderSelisihKategori('listMinus', 'cntMinus', result.minus);
                     renderSelisihKategori('listBelum', 'cntBelum', result.belum);
-                    btn.innerText = "🔄 Sync & Cek Item Selisih";
-                } else { alert("Gagal memuat: " + result.message); btn.innerText = "Sync & Cek Item Selisih"; }
-            } catch(e) { alert("Error koneksi!"); btn.innerText = "Sync & Cek Item Selisih"; }
+                } else {
+                    alert("Gagal memuat: " + result.message);
+                }
+            } catch (e) {
+                alert("Koneksi ke server sedang padat. Silakan coba beberapa saat lagi.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Sinkronisasi & Cek Selisih";
+            }
         }
 
         function renderSelisihKategori(elementId, countId, dataArray) {
-            document.getElementById(countId).innerText = dataArray.length; let html = '';
-            if(dataArray.length === 0) { html = '<div style="font-size:11px; color:#888; padding:5px 0;">Tidak ada item.</div>'; } 
-            else {
+            document.getElementById(countId).innerText = dataArray.length;
+            let html = '';
+            if (dataArray.length === 0) {
+                html = '<div style="font-size:12px; color:var(--text-muted); padding:8px 0;">Tidak ada item pada kategori ini.</div>';
+            } else {
                 dataArray.forEach(item => {
-                    html += `<div class="selisih-item" onclick="klikItemSelisih('${item.kode}')" title="Klik untuk hitung ulang">
+                    html += `<div class="selisih-item" onclick="klikItemSelisih('${item.kode}')">
                         <strong>${item.nama}</strong><br>
-                        <span style="color:#666;">Target Master: ${item.target} | Total Fisik: ${item.fisik} | Selisih: <strong style="color:red;">${item.selisih}</strong></span>
+                        <span style="color:var(--text-muted);">Target: ${item.target} | Fisik: ${item.fisik} | Selisih: <strong style="color:var(--danger);">${item.selisih}</strong></span>
                     </div>`;
                 });
             }
@@ -292,42 +764,41 @@
             toggleSidebar(); 
             document.getElementById('kodeBarang').value = kode; 
             pencarianBarcode(); 
-            if(document.getElementById('boxHistori').style.display === "none") toggleHistoriBox(); 
+            if (document.getElementById('boxHistori').style.display === "none") toggleHistoriBox(); 
             
-            document.getElementById('historiTitle').innerText = "Histori Input Server (Global)";
-            document.getElementById('listHistori').innerHTML = "<p style='font-size:12px; color:#f39c12;'>⏳ Menarik histori global dari server...</p>";
+            document.getElementById('historiTitle').innerText = "Histori Server (Koreksi Silang)";
+            document.getElementById('listHistori').innerHTML = "<p style='font-size:12px; color:var(--accent);'>Menarik riwayat input seluruh staf dari server...</p>";
             
-            let jobId = document.getElementById('jobIdStaff').value.toUpperCase();
+            const jobId = document.getElementById('jobIdStaff').value.trim().toUpperCase();
             try {
-                let res = await fetch(URL_GAS, { method: 'POST', body: JSON.stringify({ action: 'get_global_history_item', jobId: jobId, kode: kode }) });
-                let result = await res.json();
-                if(result.status === 'success') {
+                const result = await postGAS({ action: 'get_global_history_item', jobId: jobId, kode: kode });
+                if (result.status === 'success') {
                     globalHistoryView = result.history;
                     renderGlobalHistori();
                 } else {
-                    document.getElementById('listHistori').innerHTML = "<p style='color:red;'>Gagal menarik data histori server.</p>";
+                    document.getElementById('listHistori').innerHTML = "<p class='text-danger' style='font-size:12px;'>Gagal menarik data histori server.</p>";
                 }
-            } catch(e) {
-                document.getElementById('listHistori').innerHTML = "<p style='color:red;'>Error koneksi server.</p>";
+            } catch (e) {
+                document.getElementById('listHistori').innerHTML = "<p class='text-danger' style='font-size:12px;'>Gagal terhubung ke server.</p>";
             }
         }
 
         function renderGlobalHistori() {
-            let html = `<div style="background:#e0f2ec; padding:8px; border-radius:6px; margin-bottom:10px; font-size:12px; color:#156d53; font-weight:bold;">🌐 Mode Koreksi Silang: Menampilkan seluruh staf yang menginput barang ini.</div>`;
-            if(globalHistoryView.length === 0) { 
-                html += "<p style='font-size:12px; color:#888;'>Belum ada inputan fisik untuk barang ini.</p>"; 
+            let html = `<div style="background:var(--primary-soft); padding:8px 10px; border-radius:6px; margin-bottom:10px; font-size:12px; color:var(--primary); font-weight:600;">Mode Koreksi Silang: Menampilkan seluruh staf yang menginput barang ini.</div>`;
+            if (!globalHistoryView || globalHistoryView.length === 0) { 
+                html += "<p style='font-size:12px; color:var(--text-muted);'>Belum ada catatan input fisik untuk barang ini.</p>"; 
             } else {
                 globalHistoryView.forEach(h => {
                     html += `
                     <div class="histori-item" id="item-${h.id}">
                         <div class="histori-detail">
                             <strong>${h.nama}</strong>
-                            <span>Input by: <strong style="color:#2980b9;">${h.pic}</strong></span><br>
-                            <span>Qty Fisik: <strong style="color:#d35400; display:inline;">${h.stokFisik}</strong> | ${h.waktu.split(' ')[1] || h.waktu}</span>
+                            <span>PIC: <strong style="display:inline; color:var(--primary);">${h.pic}</strong> | Waktu: ${h.waktu.split(' ')[1] || h.waktu}</span><br>
+                            <span class="badge-qty">Fisik: ${h.stokFisik}</span>
                         </div>
                         <div class="histori-actions">
-                            <button class="btn-edit" onclick="masukModeEdit('${h.id}', true)">Edit</button>
-                            <button class="btn-delete" onclick="hapusDataServer('${h.id}', true)">Hapus</button>
+                            <button class="btn-sm btn-edit" onclick="masukModeEdit('${h.id}', true)">Edit</button>
+                            <button class="btn-sm btn-delete" onclick="hapusDataServer('${h.id}', true)">Hapus</button>
                         </div>
                     </div>`;
                 });
@@ -336,264 +807,400 @@
         }
 
         async function verifikasiPIN() {
-            let pin = document.getElementById('spvPin').value; let status = document.getElementById('pinStatus'); if(!pin) return;
-            status.innerText = "Verifikasi..."; status.style.color = "#f39c12";
+            const pin = document.getElementById('spvPin').value.trim();
+            if (!pin) return;
+            setStatusMsg('pinStatus', 'Memverifikasi akses...', 'warning');
             try {
-                let res = await fetch(URL_GAS, { method: 'POST', body: JSON.stringify({ action: 'verify_pin', pin: pin }) });
-                let result = await res.json();
-                if(result.status === 'success') {
-                    document.getElementById('spvPinArea').style.display = 'none'; document.getElementById('spvUploadArea').style.display = 'block'; document.getElementById('namaSPVText').innerText = result.nama;
-                } else { status.innerText = "❌ PIN Salah!"; status.style.color = "red"; }
-            } catch(e) { status.innerText = "Error koneksi."; status.style.color = "red"; }
+                const result = await postGAS({ action: 'verify_pin', pin: pin });
+                if (result.status === 'success') {
+                    document.getElementById('spvPinArea').style.display = 'none';
+                    document.getElementById('spvUploadArea').style.display = 'block';
+                    document.getElementById('namaSPVText').innerText = result.nama;
+                    setStatusMsg('pinStatus', '');
+                } else {
+                    setStatusMsg('pinStatus', 'PIN tidak valid.', 'danger');
+                }
+            } catch (e) {
+                setStatusMsg('pinStatus', 'Gagal menghubungi server.', 'danger');
+            }
         }
 
         function prosesUpload() {
-            let fileInput = document.getElementById('fileExcel'); let status = document.getElementById('uploadStatus');
-            if(fileInput.files.length === 0) return status.innerText = "Pilih file!", status.style.color = "red";
-            status.innerText = "Membuat Laporan... (Tunggu 10 detik)"; status.style.color = "#f39c12";
-            let reader = new FileReader();
-            reader.onload = function(e) {
-                let data = new Uint8Array(e.target.result); let workbook = XLSX.read(data, {type: 'array'});
-                let worksheet = workbook.Sheets[workbook.SheetNames[0]]; let jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
-                let selE5 = worksheet['E5'] ? worksheet['E5'].v : "WHOLESALE"; 
-                fetch(URL_GAS, { method: 'POST', body: JSON.stringify({ action: 'upload_master', data: jsonData, gudang: selE5 })
-                }).then(res => res.json()).then(result => {
-                    if(result.status === 'success') {
-                        status.innerText = "✅ Sesi Dibuat!"; status.style.color = "#156d53";
-                        document.getElementById('spvResultArea').style.display = 'block'; document.getElementById('resultJobId').innerText = result.jobId; document.getElementById('resultUrl').href = result.url;
-                    } else { status.innerText = "❌ Gagal: " + result.message; status.style.color = "red"; }
-                });
+            const fileInput = document.getElementById('fileExcel');
+            if (fileInput.files.length === 0) return setStatusMsg('uploadStatus', 'Pilih file Excel terlebih dahulu.', 'danger');
+            setStatusMsg('uploadStatus', 'Membuat lembar kerja laporan...', 'warning');
+            
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    const selE5 = worksheet['E5'] ? worksheet['E5'].v : "WHOLESALE";
+
+                    const result = await postGAS({ action: 'upload_master', data: jsonData, gudang: selE5 }, 45000);
+                    if (result.status === 'success') {
+                        setStatusMsg('uploadStatus', 'Sesi audit berhasil dibuat.', 'success');
+                        document.getElementById('spvResultArea').style.display = 'block';
+                        document.getElementById('resultJobId').innerText = result.jobId;
+                        document.getElementById('resultUrl').href = result.url;
+                    } else {
+                        setStatusMsg('uploadStatus', 'Gagal: ' + result.message, 'danger');
+                    }
+                } catch (err) {
+                    setStatusMsg('uploadStatus', 'Koneksi terputus saat mengunggah data.', 'danger');
+                }
             };
             reader.readAsArrayBuffer(fileInput.files[0]);
         }
 
         async function kunciSesi() {
-            let jobId = document.getElementById('jobIdStaff').value.toUpperCase(); let pic = document.getElementById('picStaff').value; let status = document.getElementById('lockStatus');
-            if(!jobId || !pic) return status.innerText = "Isi Job ID dan PIC!", status.style.color = "red";
-            status.innerText = "Mengunduh Data Server (Tunggu beberapa detik)..."; status.style.color = "#f39c12";
+            const jobId = document.getElementById('jobIdStaff').value.trim().toUpperCase();
+            const pic = document.getElementById('picStaff').value.trim();
+            if (!jobId || !pic) return setStatusMsg('lockStatus', 'Job ID dan Nama PIC wajib diisi.', 'danger');
+            
+            const btnLock = document.getElementById('btnLock');
+            btnLock.disabled = true;
+            setStatusMsg('lockStatus', 'Mengunduh data master dari server...', 'warning');
 
             try {
-                let res = await fetch(URL_GAS, { method: 'POST', body: JSON.stringify({ action: 'get_job_data', jobId: jobId, pic: pic }) });
-                let result = await res.json();
-                
-                if(result.status === 'success') {
+                const result = await postGAS({ action: 'get_job_data', jobId: jobId, pic: pic });
+                if (result.status === 'success') {
                     localStorage.setItem('masterJob', JSON.stringify(result.master));
                     localStorage.setItem('histori_' + jobId, JSON.stringify(result.history));
                     localStorage.setItem('rekapFisik_' + jobId, JSON.stringify(result.rekapFisik));
                     
-                    status.innerText = `✅ Sesi Terkunci! (${result.master.length} Target)`; status.style.color = "#156d53";
-                    document.getElementById('jobIdStaff').disabled = true; document.getElementById('picStaff').disabled = true;
-                    let btn = document.getElementById('btnLock'); btn.innerText = "🔒 Aktif"; btn.classList.add('locked'); btn.disabled = true;
+                    setStatusMsg('lockStatus', `Sesi terkunci (${result.master.length} SKU dimuat).`, 'success');
+                    document.getElementById('jobIdStaff').disabled = true;
+                    document.getElementById('picStaff').disabled = true;
+                    btnLock.innerText = "Sesi Terkunci";
+                    btnLock.className = "btn-primary";
 
-                    let areaScan = document.getElementById('areaScan'); areaScan.style.opacity = "1"; areaScan.style.pointerEvents = "auto";
+                    const areaScan = document.getElementById('areaScan');
+                    areaScan.style.opacity = "1";
+                    areaScan.style.pointerEvents = "auto";
                     document.getElementById('areaHistori').style.display = "block";
-                    renderHistori(); updateQueueUI(); 
-                    setTimeout(toggleSesiBox, 1000); document.getElementById('kodeBarang').focus();
+                    
+                    renderHistori();
+                    updateQueueUI(); 
+                    setTimeout(toggleSesiBox, 600);
+                    document.getElementById('kodeBarang').focus();
 
-                    if(autoSyncTimer) clearInterval(autoSyncTimer);
-                    setInterval(prosesAntreanSiluman, 3000); 
-                    autoSyncTimer = setInterval(tarikRekapSiluman, 60000); 
-                } else { status.innerText = "❌ Job ID tidak ditemukan!"; status.style.color = "red"; }
-            } catch(e) { status.innerText = "Koneksi gagal. Coba tekan Kunci lagi."; status.style.color = "red"; }
-        }
+                    // Bersihkan timer lama (Mencegah Memory & Timer Leak)
+                    if (queueSyncTimer) clearInterval(queueSyncTimer);
+                    if (rekapSyncTimer) clearInterval(rekapSyncTimer);
 
-        function updateQueueUI() {
-            let jobId = document.getElementById('jobIdStaff').value.toUpperCase();
-            let queue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || [];
-            let box = document.getElementById('queueStatusBox');
-            let text = document.getElementById('queueText');
-            
-            box.style.display = 'flex';
-            if (queue.length > 0) {
-                box.classList.remove('synced'); text.innerText = `☁️ ${queue.length} data tertunda (Proses Cloud...)`;
-            } else {
-                box.classList.add('synced'); text.innerText = `✅ Semua data tersimpan di Cloud.`;
+                    // JITTER ACAK (5.5 - 8.5 detik): Mencegah 20 perangkat menembak server pada milidetik yang sama
+                    const randomQueueInterval = Math.floor(5500 + Math.random() * 3000);
+                    const randomRekapInterval = Math.floor(55000 + Math.random() * 15000);
+                    queueSyncTimer = setInterval(() => prosesAntreanSiluman(false), randomQueueInterval);
+                    rekapSyncTimer = setInterval(tarikRekapSiluman, randomRekapInterval);
+                } else {
+                    btnLock.disabled = false;
+                    setStatusMsg('lockStatus', 'Job ID tidak ditemukan di server.', 'danger');
+                }
+            } catch (e) {
+                btnLock.disabled = false;
+                setStatusMsg('lockStatus', 'Gagal terhubung ke server. Silakan coba lagi.', 'danger');
             }
         }
 
-        async function prosesAntreanSiluman() {
-            if(isSyncingQueue) return; 
-            let jobId = document.getElementById('jobIdStaff').value.toUpperCase();
-            if(!jobId) return;
+        function updateQueueUI() {
+            const jobId = document.getElementById('jobIdStaff').value.trim().toUpperCase();
+            const queue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || [];
+            const box = document.getElementById('queueStatusBox');
+            const text = document.getElementById('queueText');
+            
+            box.style.display = 'flex';
+            if (queue.length > 0) {
+                box.classList.remove('synced');
+                text.innerText = isSyncingQueue 
+                    ? `Mengirim ${queue.length} data ke server...` 
+                    : `${queue.length} data dalam antrean lokal`;
+            } else {
+                box.classList.add('synced');
+                text.innerText = `Semua data tersimpan di server`;
+            }
+        }
 
-            let queue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || [];
+        async function prosesAntreanSiluman(isManual = false) {
+            if (isSyncingQueue) return; 
+            const jobId = document.getElementById('jobIdStaff').value.trim().toUpperCase();
+            if (!jobId) return;
+
+            const queue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || [];
             updateQueueUI();
-            if(queue.length === 0) return;
+            if (queue.length === 0) return;
+
+            // Ambil maksimal 40 data sekali kirim (Batching efisien)
+            const batchToSend = queue.slice(0, 40);
+            batchToSend.forEach(item => inFlightIds.add(item.id));
 
             isSyncingQueue = true;
-            document.getElementById('queueLoader').innerText = "⏳";
+            updateQueueUI();
             
-            let payload = { action: 'submit_scan', jobId: jobId, scans: queue };
             try {
-                let res = await fetch(URL_GAS, { method: 'POST', body: JSON.stringify(payload) });
-                let result = await res.json();
-                if(result.status === 'success') {
-                    let currentQueue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || [];
-                    let sentIds = queue.map(q => q.id);
-                    let remainingQueue = currentQueue.filter(q => !sentIds.includes(q.id));
+                const result = await postGAS({ action: 'submit_scan', jobId: jobId, scans: batchToSend });
+                if (result && result.status === 'success') {
+                    const currentQueue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || [];
+                    const sentIds = new Set(batchToSend.map(q => q.id));
+                    const remainingQueue = currentQueue.filter(q => !sentIds.has(q.id));
                     localStorage.setItem('syncQueue_' + jobId, JSON.stringify(remainingQueue));
-                    updateQueueUI();
                 }
-            } catch(e) {}
-            document.getElementById('queueLoader').innerText = "";
-            isSyncingQueue = false;
+            } catch (e) {
+                if (isManual) setStatusMsg('statusScan', 'Server sedang sibuk, data tetap aman di antrean lokal.', 'warning');
+            } finally {
+                batchToSend.forEach(item => inFlightIds.delete(item.id));
+                isSyncingQueue = false;
+                updateQueueUI();
+            }
         }
 
         async function tarikRekapSiluman() {
-            if (isSyncingRekap) return; 
-            let jobId = document.getElementById('jobIdStaff').value.toUpperCase();
-            if(!jobId) return;
+            if (isSyncingRekap || isSyncingQueue) return; 
+            const jobId = document.getElementById('jobIdStaff').value.trim().toUpperCase();
+            if (!jobId) return;
             
             isSyncingRekap = true;
             try {
-                let res = await fetch(URL_GAS, { method: 'POST', body: JSON.stringify({ action: 'sync_rekap', jobId: jobId }) });
-                let result = await res.json();
-                if(result.status === 'success') {
+                const result = await postGAS({ action: 'sync_rekap', jobId: jobId });
+                if (result.status === 'success') {
                     localStorage.setItem('rekapFisik_' + jobId, JSON.stringify(result.rekapFisik));
-                    let curKode = document.getElementById('kodeBarang').value;
-                    if(curKode && !editModeId) {
-                         let master = JSON.parse(localStorage.getItem('masterJob')) || [];
-                         let barang = master.find(b => b.kode === curKode);
-                         if(barang) {
-                             let totalGlobal = result.rekapFisik[curKode] || 0;
-                             let queue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || [];
-                             let antreanBarangIni = queue.filter(q => q.kode === curKode).reduce((sum, q) => sum + parseFloat(q.stokFisik), 0);
-                             document.getElementById('sisaTarget').value = barang.kuantitas - (totalGlobal + antreanBarangIni);
-                         }
+                    const curKode = document.getElementById('kodeBarang').value.trim();
+                    if (curKode && !editModeId) {
+                        hitungUlangSisaTargetLokal(curKode);
                     }
                 }
-            } catch(e) {} 
-            isSyncingRekap = false;
+            } catch (e) {} finally {
+                isSyncingRekap = false;
+            }
         }
 
-        function handleEnterScan(e) { if(e.key === 'Enter') { e.preventDefault(); pencarianBarcode(); } }
+        function hitungUlangSisaTargetLokal(kode) {
+            const jobId = document.getElementById('jobIdStaff').value.trim().toUpperCase();
+            const master = JSON.parse(localStorage.getItem('masterJob')) || [];
+            const barang = master.find(b => String(b.kode) === String(kode));
+            if (!barang) return;
+
+            const rekap = JSON.parse(localStorage.getItem('rekapFisik_' + jobId)) || {};
+            const totalGlobal = parseFloat(rekap[barang.kode]) || 0;
+            document.getElementById('sisaTarget').value = barang.kuantitas - totalGlobal;
+        }
+
+        function handleEnterScan(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                pencarianBarcode();
+            }
+        }
+
+        function handleEnterFisik(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!document.getElementById('btnSubmit').disabled) {
+                    prosesSimpanData();
+                }
+            }
+        }
+
         function pencarianBarcode() {
-            let kode = document.getElementById('kodeBarang').value.trim(); if(!kode) return;
-            let master = JSON.parse(localStorage.getItem('masterJob')) || []; let barang = master.find(b => b.kode === kode);
+            const kode = document.getElementById('kodeBarang').value.trim();
+            if (!kode) return;
+            const master = JSON.parse(localStorage.getItem('masterJob')) || [];
+            const barang = master.find(b => String(b.kode).toLowerCase() === kode.toLowerCase());
             setHasilCari(barang, "Barcode");
         }
 
         function jalankanAutocomplete(val) {
-            let listContainer = document.getElementById("autocompleteList"); listContainer.innerHTML = ""; if (!val) return false;
-            let master = JSON.parse(localStorage.getItem('masterJob')) || []; let matched = master.filter(b => b.nama.toLowerCase().includes(val.toLowerCase())).slice(0, 30);
+            const listContainer = document.getElementById("autocompleteList");
+            listContainer.innerHTML = "";
+            if (!val || val.trim().length < 2) return false;
+            
+            const keyword = val.toLowerCase().trim();
+            const master = JSON.parse(localStorage.getItem('masterJob')) || [];
+            const matched = master.filter(b => b.nama.toLowerCase().includes(keyword)).slice(0, 25);
+            
             matched.forEach(b => {
-                let itemDiv = document.createElement("DIV"); itemDiv.innerHTML = b.nama; 
-                itemDiv.addEventListener("click", function(e) { document.getElementById("namaBarang").value = b.nama; listContainer.innerHTML = ""; pencarianNama(); });
+                const itemDiv = document.createElement("div");
+                itemDiv.textContent = b.nama;
+                itemDiv.addEventListener("click", function() {
+                    document.getElementById("namaBarang").value = b.nama;
+                    listContainer.innerHTML = "";
+                    pencarianNama();
+                });
                 listContainer.appendChild(itemDiv);
             });
         }
 
-        document.addEventListener("click", function (e) { if (e.target.id !== "namaBarang") { document.getElementById("autocompleteList").innerHTML = ""; } });
+        document.addEventListener("click", function (e) {
+            if (e.target.id !== "namaBarang") {
+                document.getElementById("autocompleteList").innerHTML = "";
+            }
+        });
 
         function pencarianNama() {
-            let nama = document.getElementById('namaBarang').value.trim(); if(!nama) return;
-            let master = JSON.parse(localStorage.getItem('masterJob')) || []; let barang = master.find(b => b.nama === nama);
-            setHasilCari(barang, "Nama");
+            const nama = document.getElementById('namaBarang').value.trim();
+            if (!nama) return;
+            const master = JSON.parse(localStorage.getItem('masterJob')) || [];
+            const barang = master.find(b => b.nama === nama);
+            setHasilCari(barang, "Nama Barang");
         }
 
         function setHasilCari(barang, tipe) {
-            let status = document.getElementById('statusScan'); let btnSubmit = document.getElementById('btnSubmit');
-            if(barang) {
-                document.getElementById('kodeBarang').value = barang.kode; document.getElementById('namaBarang').value = barang.nama;
-                let jobId = document.getElementById('jobIdStaff').value.toUpperCase();
-                let rekap = JSON.parse(localStorage.getItem('rekapFisik_' + jobId)) || {};
-                let totalGlobal = rekap[barang.kode] || 0;
-                let queue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || [];
-                let antreanBarangIni = queue.filter(q => q.kode === barang.kode).reduce((sum, q) => sum + parseFloat(q.stokFisik), 0);
+            const btnSubmit = document.getElementById('btnSubmit');
+            if (barang) {
+                document.getElementById('kodeBarang').value = barang.kode;
+                document.getElementById('namaBarang').value = barang.nama;
+                hitungUlangSisaTargetLokal(barang.kode);
                 
-                let sisaTargetReal = barang.kuantitas - (totalGlobal + antreanBarangIni);
-                document.getElementById('sisaTarget').value = sisaTargetReal;
-                status.innerText = `✅ Valid (${tipe}). Masukkan stok fisik.`; status.style.color = "#156d53";
-                btnSubmit.disabled = false; document.getElementById('stokFisik').focus();
+                setStatusMsg('statusScan', `${tipe} terverifikasi. Masukkan jumlah fisik lalu tekan Enter.`, 'success');
+                btnSubmit.disabled = false;
+                document.getElementById('stokFisik').focus();
+                document.getElementById('stokFisik').select();
             } else {
-                document.getElementById('sisaTarget').value = "0"; status.innerText = `❌ ${tipe} Tidak Ditemukan. Berikan ke SPV.`; status.style.color = "red";
-                btnSubmit.disabled = true; setTimeout(resetFormKhusus, 3000);
+                document.getElementById('sisaTarget').value = "0";
+                setStatusMsg('statusScan', `${tipe} tidak terdaftar di Master Data. Lapor ke SPV.`, 'danger');
+                btnSubmit.disabled = true;
+                setTimeout(resetFormKhusus, 2200);
             }
         }
 
         async function prosesSimpanData() {
-            let stokFisik = document.getElementById('stokFisik').value; let status = document.getElementById('statusScan');
-            if(!stokFisik) return status.innerText = "Isi jumlah fisik!", status.style.color = "red";
+            const rawFisik = document.getElementById('stokFisik').value;
+            const stokFisikNum = parseFloat(rawFisik);
+            if (rawFisik === '' || isNaN(stokFisikNum)) {
+                return setStatusMsg('statusScan', 'Jumlah stok fisik wajib berupa angka valid.', 'danger');
+            }
 
-            let actionType = editModeId ? 'edit_scan' : 'submit_scan';
-            let idTransaksi = editModeId ? editModeId : "ID-" + Date.now();
-            let jobId = document.getElementById('jobIdStaff').value.toUpperCase();
+            const kode = document.getElementById('kodeBarang').value.trim();
+            const nama = document.getElementById('namaBarang').value.trim();
+            if (!kode || !nama) {
+                return setStatusMsg('statusScan', 'Pilih barang terlebih dahulu.', 'danger');
+            }
 
-            let master = JSON.parse(localStorage.getItem('masterJob')) || [];
-            let barang = master.find(b => b.kode === document.getElementById('kodeBarang').value);
-            let stokSistemMaster = barang ? barang.kuantitas : 0;
+            const jobId = document.getElementById('jobIdStaff').value.trim().toUpperCase();
+            const picLogin = document.getElementById('picStaff').value.trim();
+            const actionType = editModeId ? 'edit_scan' : 'submit_scan';
+            const idTransaksi = editModeId ? editModeId : buatIdUnik(picLogin);
 
-            let payload = {
+            const master = JSON.parse(localStorage.getItem('masterJob')) || [];
+            const barang = master.find(b => String(b.kode) === String(kode));
+            const stokSistemMaster = barang ? barang.kuantitas : 0;
+
+            const payload = {
                 action: actionType,
                 id: idTransaksi,
                 jobId: jobId,
                 waktu: new Date().toLocaleString('id-ID'),
-                // UPDATE: Saat edit silang, gunakan nama staf aslinya. Jika input baru, gunakan nama PIC login.
-                pic: editOriginalPic ? editOriginalPic : document.getElementById('picStaff').value,
-                kode: document.getElementById('kodeBarang').value,
-                nama: document.getElementById('namaBarang').value,
+                pic: editOriginalPic ? editOriginalPic : picLogin,
+                kode: kode,
+                nama: nama,
                 stokSistem: stokSistemMaster,
-                stokFisik: stokFisik
+                stokFisik: stokFisikNum
             };
 
             if (actionType === 'submit_scan') {
-                let queue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || []; queue.push(payload); localStorage.setItem('syncQueue_' + jobId, JSON.stringify(queue));
-                let rekap = JSON.parse(localStorage.getItem('rekapFisik_' + jobId)) || {}; rekap[payload.kode] = (parseFloat(rekap[payload.kode]) || 0) + parseFloat(stokFisik);
+                // Simpan Instan ke Antrean Lokal (0ms Latency untuk Retensi Cepat)
+                const queue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || [];
+                queue.push(payload);
+                localStorage.setItem('syncQueue_' + jobId, JSON.stringify(queue));
+
+                const rekap = JSON.parse(localStorage.getItem('rekapFisik_' + jobId)) || {};
+                rekap[payload.kode] = (parseFloat(rekap[payload.kode]) || 0) + stokFisikNum;
                 localStorage.setItem('rekapFisik_' + jobId, JSON.stringify(rekap));
 
-                simpanHistoriLokal(payload, actionType); updateQueueUI(); resetFormKhusus();
-                
+                simpanHistoriLokal(payload, actionType);
+                updateQueueUI();
+                resetFormKhusus();
+                setStatusMsg('statusScan', `Tersimpan: ${nama} (Fisik: ${stokFisikNum})`, 'success');
+
+                // Jika antrean sudah mencapai 15 item, langsung picu pengiriman batch
+                if (queue.length >= 15) {
+                    prosesAntreanSiluman(false);
+                }
             } else {
-                status.innerText = "Menyimpan revisi..."; status.style.color = "#f39c12"; document.getElementById('btnSubmit').disabled = true;
+                // Mode Edit Data
+                if (inFlightIds.has(idTransaksi)) {
+                    return setStatusMsg('statusScan', 'Data sedang disinkronkan ke server, tunggu 2 detik lalu simpan ulang.', 'warning');
+                }
+
+                setStatusMsg('statusScan', 'Menyimpan perubahan data...', 'warning');
+                document.getElementById('btnSubmit').disabled = true;
                 
-                let queue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || [];
-                let qIndex = queue.findIndex(q => q.id === idTransaksi);
+                const queue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || [];
+                const qIndex = queue.findIndex(q => q.id === idTransaksi);
                 
                 if (qIndex !== -1) {
-                    queue[qIndex] = payload; localStorage.setItem('syncQueue_' + jobId, JSON.stringify(queue));
-                    simpanHistoriLokal(payload, actionType); 
-                    
-                    if(globalHistoryView) klikItemSelisih(payload.kode); else resetFormKhusus();
+                    const selisihEdit = stokFisikNum - (parseFloat(queue[qIndex].stokFisik) || 0);
+                    queue[qIndex] = payload;
+                    localStorage.setItem('syncQueue_' + jobId, JSON.stringify(queue));
+
+                    const rekap = JSON.parse(localStorage.getItem('rekapFisik_' + jobId)) || {};
+                    rekap[payload.kode] = (parseFloat(rekap[payload.kode]) || 0) + selisihEdit;
+                    localStorage.setItem('rekapFisik_' + jobId, JSON.stringify(rekap));
+
+                    simpanHistoriLokal(payload, actionType);
+                    if (globalHistoryView) klikItemSelisih(payload.kode);
+                    else resetFormKhusus();
                 } else {
                     try {
-                        let res = await fetch(URL_GAS, { method: 'POST', body: JSON.stringify(payload) });
-                        let result = await res.json();
-                        if(result.status === 'success') {
-                            tarikRekapSiluman(); simpanHistoriLokal(payload, actionType); 
-                            if(globalHistoryView) klikItemSelisih(payload.kode); else resetFormKhusus();
-                        } else { status.innerText = "❌ Gagal revisi: " + result.message; status.style.color = "red"; }
-                    } catch(e) { status.innerText = "❌ Error internet. Coba Kirim lagi."; status.style.color = "red"; }
+                        const result = await postGAS(payload);
+                        if (result.status === 'success') {
+                            tarikRekapSiluman();
+                            simpanHistoriLokal(payload, actionType);
+                            if (globalHistoryView) klikItemSelisih(payload.kode);
+                            else resetFormKhusus();
+                        } else {
+                            setStatusMsg('statusScan', 'Gagal menyimpan revisi: ' + result.message, 'danger');
+                        }
+                    } catch (e) {
+                        setStatusMsg('statusScan', 'Gangguan jaringan saat menyimpan revisi. Coba lagi.', 'danger');
+                    }
                 }
                 document.getElementById('btnSubmit').disabled = false;
             }
         }
 
         function simpanHistoriLokal(data, actionType) {
-            let jobId = document.getElementById('jobIdStaff').value.toUpperCase();
-            let histori = JSON.parse(localStorage.getItem('histori_' + jobId)) || [];
-            if(actionType === 'edit_scan') { let idx = histori.findIndex(h => h.id === data.id); if(idx !== -1) histori[idx] = data; } else { histori.unshift(data); }
+            const jobId = document.getElementById('jobIdStaff').value.trim().toUpperCase();
+            const histori = JSON.parse(localStorage.getItem('histori_' + jobId)) || [];
+            if (actionType === 'edit_scan') {
+                const idx = histori.findIndex(h => h.id === data.id);
+                if (idx !== -1) histori[idx] = data;
+            } else {
+                histori.unshift(data);
+            }
             localStorage.setItem('histori_' + jobId, JSON.stringify(histori)); 
-            if(!globalHistoryView) renderHistori();
+            if (!globalHistoryView) renderHistori();
         }
 
-        function filterHistori() { let keyword = document.getElementById('cariHistori').value.toLowerCase().trim(); renderHistori(keyword); }
+        function filterHistori() {
+            const keyword = document.getElementById('cariHistori').value.toLowerCase().trim();
+            renderHistori(keyword);
+        }
+
         function renderHistori(keyword = "") {
-            let jobId = document.getElementById('jobIdStaff').value.toUpperCase();
+            const jobId = document.getElementById('jobIdStaff').value.trim().toUpperCase();
             let histori = JSON.parse(localStorage.getItem('histori_' + jobId)) || [];
-            if(keyword !== "") { histori = histori.filter(h => h.nama.toLowerCase().includes(keyword) || h.kode.toLowerCase().includes(keyword)); }
+            if (keyword !== "") {
+                histori = histori.filter(h => h.nama.toLowerCase().includes(keyword) || String(h.kode).toLowerCase().includes(keyword));
+            }
             let html = '';
-            if(histori.length === 0) { html = "<p style='font-size:12px; color:#888;'>Tidak ada data histori yang cocok.</p>"; } else {
-                histori.forEach(h => {
+            if (histori.length === 0) {
+                html = "<p style='font-size:12px; color:var(--text-muted);'>Belum ada riwayat input yang sesuai.</p>";
+            } else {
+                histori.slice(0, 60).forEach(h => {
                     html += `
                     <div class="histori-item" id="item-${h.id}">
                         <div class="histori-detail">
                             <strong>${h.nama}</strong>
-                            <span>Kode: ${h.kode}</span><br>
-                            <span>Qty Fisik: <strong style="color:#d35400; display:inline;">${h.stokFisik}</strong> | ${h.waktu.split(' ')[1] || h.waktu}</span>
+                            <span>Kode: ${h.kode} | ${h.waktu.split(' ')[1] || h.waktu}</span><br>
+                            <span class="badge-qty">Fisik: ${h.stokFisik}</span>
                         </div>
                         <div class="histori-actions">
-                            <button class="btn-edit" onclick="masukModeEdit('${h.id}')">Edit</button>
-                            <button class="btn-delete" onclick="hapusDataServer('${h.id}')">Hapus</button>
+                            <button class="btn-sm btn-edit" onclick="masukModeEdit('${h.id}')">Edit</button>
+                            <button class="btn-sm btn-delete" onclick="hapusDataServer('${h.id}')">Hapus</button>
                         </div>
                     </div>`;
                 });
@@ -602,103 +1209,147 @@
         }
 
         function masukModeEdit(id, isGlobal = false) {
-            let jobId = document.getElementById('jobIdStaff').value.toUpperCase();
+            if (inFlightIds.has(id)) {
+                return alert("Data ini sedang dalam proses sinkronisasi ke server. Tunggu beberapa detik.");
+            }
+            const jobId = document.getElementById('jobIdStaff').value.trim().toUpperCase();
             let data = null;
             
             if (isGlobal && globalHistoryView) {
                 data = globalHistoryView.find(h => h.id === id);
             } else {
-                let histori = JSON.parse(localStorage.getItem('histori_' + jobId)) || [];
+                const histori = JSON.parse(localStorage.getItem('histori_' + jobId)) || [];
                 data = histori.find(h => h.id === id);
             }
             
-            if(data) {
-                document.getElementById('kodeBarang').value = data.kode; document.getElementById('namaBarang').value = data.nama;
-                let master = JSON.parse(localStorage.getItem('masterJob')) || []; let barang = master.find(b => b.kode === data.kode);
-                let rekap = JSON.parse(localStorage.getItem('rekapFisik_' + jobId)) || {}; let totalGlobal = rekap[data.kode] || 0;
-                let sisaTargetReal = barang ? (barang.kuantitas - (totalGlobal - data.stokFisik)) : data.stokSistem;
-                document.getElementById('sisaTarget').value = sisaTargetReal; document.getElementById('stokFisik').value = data.stokFisik;
+            if (data) {
+                document.getElementById('kodeBarang').value = data.kode;
+                document.getElementById('namaBarang').value = data.nama;
+                const master = JSON.parse(localStorage.getItem('masterJob')) || [];
+                const barang = master.find(b => String(b.kode) === String(data.kode));
+                const rekap = JSON.parse(localStorage.getItem('rekapFisik_' + jobId)) || {};
+                const totalGlobal = parseFloat(rekap[data.kode]) || 0;
+                const sisaTargetReal = barang ? (barang.kuantitas - (totalGlobal - parseFloat(data.stokFisik))) : data.stokSistem;
+                
+                document.getElementById('sisaTarget').value = sisaTargetReal;
+                document.getElementById('stokFisik').value = data.stokFisik;
                 
                 editModeId = id; 
                 editOriginalPic = data.pic; 
                 
-                let btn = document.getElementById('btnSubmit'); btn.innerText = "Simpan Perubahan (Edit)"; btn.style.backgroundColor = "#f39c12";
-                document.getElementById('statusScan').innerText = `⚠️ Mode Edit Aktif (Awal: ${data.pic})`; document.getElementById('statusScan').style.color = "#f39c12";
+                const btn = document.getElementById('btnSubmit');
+                btn.innerText = "Simpan Perubahan Edit";
+                btn.className = "btn-warning";
+                btn.disabled = false;
+                setStatusMsg('statusScan', `Mode Edit Aktif (PIC Awal: ${data.pic})`, 'warning');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+                document.getElementById('stokFisik').focus();
             }
         }
 
         async function hapusDataServer(id, isGlobal = false) {
-            if(!confirm("Yakin ingin menghapus data ini dari sistem?")) return;
-            let btnDel = document.querySelector(`#item-${id} .btn-delete`); btnDel.innerText = "..."; btnDel.disabled = true;
-            let jobId = document.getElementById('jobIdStaff').value.toUpperCase(); 
+            if (inFlightIds.has(id)) {
+                return alert("Data sedang dikirim ke server, tunggu 2 detik sebelum menghapus.");
+            }
+            if (!confirm("Hapus catatan stok fisik ini?")) return;
+            
+            const btnDel = document.querySelector(`#item-${id} .btn-delete`);
+            if (btnDel) { btnDel.innerText = "..."; btnDel.disabled = true; }
+            
+            const jobId = document.getElementById('jobIdStaff').value.trim().toUpperCase(); 
+            const queue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || [];
+            const qIndex = queue.findIndex(q => q.id === id);
 
-            let queue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || [];
-            let qIndex = queue.findIndex(q => q.id === id);
             if (qIndex !== -1) {
-                queue.splice(qIndex, 1); localStorage.setItem('syncQueue_' + jobId, JSON.stringify(queue));
-                let histori = JSON.parse(localStorage.getItem('histori_' + jobId)) || []; histori = histori.filter(h => h.id !== id); localStorage.setItem('histori_' + jobId, JSON.stringify(histori));
+                const deletedItem = queue[qIndex];
+                queue.splice(qIndex, 1);
+                localStorage.setItem('syncQueue_' + jobId, JSON.stringify(queue));
+
+                const rekap = JSON.parse(localStorage.getItem('rekapFisik_' + jobId)) || {};
+                rekap[deletedItem.kode] = (parseFloat(rekap[deletedItem.kode]) || 0) - (parseFloat(deletedItem.stokFisik) || 0);
+                localStorage.setItem('rekapFisik_' + jobId, JSON.stringify(rekap));
+
+                let histori = JSON.parse(localStorage.getItem('histori_' + jobId)) || [];
+                histori = histori.filter(h => h.id !== id);
+                localStorage.setItem('histori_' + jobId, JSON.stringify(histori));
                 
-                if(isGlobal) {
-                    globalHistoryView = globalHistoryView.filter(h => h.id !== id); renderGlobalHistori();
-                } else { filterHistori(); }
+                if (isGlobal && globalHistoryView) {
+                    globalHistoryView = globalHistoryView.filter(h => h.id !== id);
+                    renderGlobalHistori();
+                } else {
+                    filterHistori();
+                }
                 updateQueueUI();
             } else {
                 try {
-                    let res = await fetch(URL_GAS, { method: 'POST', body: JSON.stringify({ action: 'delete_scan', id: id, jobId: jobId }) });
-                    let result = await res.json();
-                    if(result.status === 'success') {
-                        let histori = JSON.parse(localStorage.getItem('histori_' + jobId)) || []; histori = histori.filter(h => h.id !== id); localStorage.setItem('histori_' + jobId, JSON.stringify(histori));
+                    const result = await postGAS({ action: 'delete_scan', id: id, jobId: jobId });
+                    if (result.status === 'success') {
+                        let histori = JSON.parse(localStorage.getItem('histori_' + jobId)) || [];
+                        histori = histori.filter(h => h.id !== id);
+                        localStorage.setItem('histori_' + jobId, JSON.stringify(histori));
                         
-                        if(isGlobal) {
-                            let kode = document.getElementById('kodeBarang').value; klikItemSelisih(kode); 
-                        } else { filterHistori(); }
+                        if (isGlobal) {
+                            const kode = document.getElementById('kodeBarang').value;
+                            klikItemSelisih(kode); 
+                        } else {
+                            filterHistori();
+                        }
                         tarikRekapSiluman();
-                    } else { alert("Gagal menghapus: " + result.message); btnDel.innerText = "Hapus"; btnDel.disabled = false; }
-                } catch(e) { alert("Error koneksi!"); btnDel.innerText = "Hapus"; btnDel.disabled = false; }
+                    } else {
+                        alert("Gagal menghapus: " + result.message);
+                        if (btnDel) { btnDel.innerText = "Hapus"; btnDel.disabled = false; }
+                    }
+                } catch (e) {
+                    alert("Gagal menghubungi server saat menghapus data.");
+                    if (btnDel) { btnDel.innerText = "Hapus"; btnDel.disabled = false; }
+                }
             }
         }
 
         function flushForm() {
-            document.getElementById('kodeBarang').value = ''; document.getElementById('namaBarang').value = ''; document.getElementById('sisaTarget').value = ''; document.getElementById('stokFisik').value = ''; document.getElementById('statusScan').innerText = ''; document.getElementById('autocompleteList').innerHTML = ''; 
+            document.getElementById('kodeBarang').value = '';
+            document.getElementById('namaBarang').value = '';
+            document.getElementById('sisaTarget').value = '';
+            document.getElementById('stokFisik').value = '';
+            setStatusMsg('statusScan', '');
+            document.getElementById('autocompleteList').innerHTML = ''; 
             
-            // RESET FITUR GLOBAL VIEW
             globalHistoryView = null;
             editOriginalPic = null;
+            editModeId = null;
             document.getElementById('historiTitle').innerText = "Histori Input Sesi Ini";
             filterHistori(); 
             
-            editModeId = null; let btnSubmit = document.getElementById('btnSubmit'); btnSubmit.innerText = "Kirim Data Fisik"; btnSubmit.style.backgroundColor = "#3db597"; btnSubmit.disabled = true;
+            const btnSubmit = document.getElementById('btnSubmit');
+            btnSubmit.innerText = "Simpan Data Fisik";
+            btnSubmit.className = "btn-primary";
+            btnSubmit.disabled = true;
             document.getElementById('kodeBarang').focus();
         }
 
-        function resetFormKhusus() { flushForm(); document.getElementById('btnSubmit').disabled = false; }
+        function resetFormKhusus() {
+            flushForm();
+        }
 
-        // UPDATE 1: LOGIKA JAVASCRIPT UNTUK PANEL SPV
-        function updateJSON() {
-            var jobId = document.getElementById("inputJobIdSPV").value;
-            var statusText = document.getElementById("statusSPV");
-            
-            if(jobId === "") {
-                alert("Job ID tidak boleh kosong!");
-                return;
+        // Perbaikan Bug Panel SPV: Menggunakan postGAS (Fetch API) alih-alih google.script.run
+        async function updateJSON() {
+            const jobId = document.getElementById("inputJobIdSPV").value.trim().toUpperCase();
+            if (!jobId) {
+                return setStatusMsg('statusSPV', 'Job ID wajib diisi.', 'danger');
             }
             
-            statusText.innerHTML = "Memproses sinkronisasi (Tunggu sebentar)...";
-            statusText.style.color = "blue";
-            
-            google.script.run
-                .withSuccessHandler(function(response) {
-                    if(response.status === "sukses") {
-                        statusText.innerHTML = "✅ Berhasil! " + response.pesan;
-                        statusText.style.color = "green";
-                        alert("JSON sudah di-update. Silakan infokan ke tim lapangan untuk me-refresh dan menekan tombol 'Tarik Data' ulang.");
-                    } else {
-                        statusText.innerHTML = "❌ Gagal: " + response.pesan;
-                        statusText.style.color = "red";
-                    }
-                })
-                .spvSinkronisasiUlang(jobId);
+            setStatusMsg('statusSPV', 'Memproses pembaruan Master JSON...', 'warning');
+            try {
+                const response = await postGAS({ action: 'spv_sinkronisasi_ulang', jobId: jobId }, 35000);
+                if (response.status === "sukses" || response.status === "success") {
+                    setStatusMsg('statusSPV', 'Master JSON berhasil diperbarui.', 'success');
+                    alert("Master JSON telah diperbarui. Informasikan kepada tim lapangan untuk memuat ulang halaman dan mengunci sesi kembali.");
+                } else {
+                    setStatusMsg('statusSPV', 'Gagal: ' + (response.pesan || response.message), 'danger');
+                }
+            } catch (e) {
+                setStatusMsg('statusSPV', 'Gagal terhubung ke server GAS.', 'danger');
+            }
         }
     </script>
 </body>
