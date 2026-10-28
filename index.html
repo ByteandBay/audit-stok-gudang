@@ -394,11 +394,11 @@
         .selisih-item:last-child { border-bottom: none; padding-bottom: 0; }
         .selisih-item:hover { background-color: var(--primary-soft); padding-left: 6px; border-radius: 4px; }
 
-        /* Scanner Modal */
+        /* Scanner Modal & Kontrol Kamera Pro (1D & 2D Support) */
         .scanner-modal {
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.85);
+            background: rgba(15, 23, 42, 0.88);
             z-index: 300;
             display: none;
             align-items: center;
@@ -407,31 +407,93 @@
         }
         .scanner-content {
             background: var(--surface);
-            padding: 20px;
+            padding: 18px;
             border-radius: 12px;
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             position: relative;
             text-align: center;
         }
-        #reader { width: 100%; border-radius: 8px; overflow: hidden; margin: 12px 0; }
+        .scan-mode-badge {
+            display: inline-block;
+            background: var(--primary-soft);
+            color: var(--primary);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-bottom: 6px;
+        }
+        #reader {
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 6px 0 10px 0;
+            background: #000;
+        }
+        .camera-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 8px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .zoom-row {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        .zoom-row input[type="range"] {
+            flex: 1;
+            padding: 0;
+            accent-color: var(--primary-light);
+        }
+        .btn-torch {
+            display: none;
+            background: #f1f5f9;
+            color: var(--text-main);
+            padding: 8px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+        .btn-torch.active {
+            background: var(--accent);
+            color: #fff;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Modal Kamera Barcode -->
+    <!-- Modal Kamera Barcode (Mendukung Penuh Kode 1D Batang & 2D QR/DataMatrix) -->
     <div id="scannerModal" class="scanner-modal">
         <div class="scanner-content">
-            <div class="card-header" style="margin-bottom: 8px;">
-                <h3 class="card-title">Pemindai Barcode</h3>
+            <div class="card-header" style="margin-bottom: 4px;">
+                <h3 class="card-title">Pemindai Barcode 1D & 2D</h3>
                 <button class="btn-close" onclick="tutupKamera()" aria-label="Tutup">X</button>
             </div>
+            <div class="scan-mode-badge">Mendukung Barcode Garis (1D) & QR / DataMatrix (2D)</div>
             <div id="reader"></div>
-            <p style="font-size:12px; color:var(--text-muted); margin:0;">Arahkan kamera ke barcode barang hingga terbaca otomatis.</p>
+            
+            <div class="camera-controls">
+                <div id="zoomControlRow" class="zoom-row">
+                    <span>Zoom</span>
+                    <input type="range" id="zoomSlider" min="1" max="3" step="0.1" value="1" oninput="aturZoomKamera(this.value)">
+                    <span id="zoomValueText">1.0x</span>
+                </div>
+                <button type="button" id="btnTorch" class="btn-torch" onclick="toggleSenterKamera()">Nyalakan Lampu Senter</button>
+            </div>
+
+            <p style="font-size:11px; color:var(--text-muted); margin:8px 0 0 0;">
+                Tips iPhone: Jaga jarak 15 cm dan gunakan Zoom 1.4x-1.8x agar kode 1D maupun 2D kecil langsung terkunci fokus.
+            </p>
         </div>
     </div>
 
-    <!-- Top Navbar (Ikon Menu Saja Tanpa Teks Redundan) -->
+    <!-- Top Navbar (Hanya Ikon Tanpa Teks Redundan) -->
     <div class="navbar">
         <button class="btn-icon-nav" onclick="toggleSidebar()" aria-label="Menu">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -487,7 +549,7 @@
             <p id="uploadStatus" class="status-msg"></p>
 
             <div id="spvResultArea" style="display: none; background: var(--primary-soft); padding:12px; border-radius:8px; margin-top:10px; word-break:break-all;">
-                <span style="font-size:11px; color:var(--text-muted);">Job ID Berhasil Dibuat:</span><br>
+                <span style="font-size:11px; color:var(--text-muted);">Job ID Berhasil Dibuat (Tersimpan di Folder Audit):</span><br>
                 <strong id="resultJobId" style="font-size:16px; color:var(--primary);"></strong><br>
                 <a href="#" id="resultUrl" target="_blank" style="color:var(--primary-light); font-size:12px; font-weight:600;">Buka Spreadsheet Laporan</a>
             </div>
@@ -543,11 +605,11 @@
             </div>
 
             <div class="form-group">
-                <label>Barcode Barang</label>
+                <label>Barcode Barang (1D / 2D)</label>
                 <div class="input-group-row">
-                    <input type="text" id="kodeBarang" placeholder="Scan atau ketik kode barcode..." onkeypress="handleEnterScan(event)" onchange="pencarianBarcode()">
-                    <!-- Hanya Ikon Kamera (Tanpa Teks Redundan) -->
-                    <button class="btn-icon-only" onclick="bukaKamera()" title="Buka Kamera Barcode" aria-label="Kamera">
+                    <input type="text" id="kodeBarang" placeholder="Scan kode 1D/2D atau ketik manual..." onkeypress="handleEnterScan(event)" onchange="pencarianBarcode()">
+                    <!-- Hanya Ikon Kamera -->
+                    <button class="btn-icon-only" onclick="bukaKamera()" title="Buka Kamera Barcode 1D/2D" aria-label="Kamera">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                     </button>
                 </div>
@@ -557,7 +619,7 @@
                 <label>Nama Barang</label>
                 <div class="autocomplete-container">
                     <input type="text" id="namaBarang" placeholder="Ketik untuk mencari nama barang..." oninput="jalankanAutocomplete(this.value)" autocomplete="off" style="padding-right: 40px;">
-                    <!-- Hanya Ikon Bersihkan (Tanpa Teks Redundan) -->
+                    <!-- Hanya Ikon Bersihkan -->
                     <button type="button" class="btn-clear-input" onclick="flushForm()" title="Bersihkan Kolom" aria-label="Bersihkan">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
@@ -607,16 +669,32 @@
         let isSyncingQueue = false; 
         let isSyncingRekap = false;
         let html5QrCode = null;
-        let inFlightIds = new Set(); // Pelindung anti-race condition saat sinkronisasi berjalan
+        let isTorchOn = false;
+        let inFlightIds = new Set();
 
-        // Generator ID Unik Anti-Tabrakan untuk 20+ User Bersamaan
+        function bunyiBeepScan() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                const ctx = new AudioCtx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = "sine";
+                osc.frequency.setValueAtTime(1480, ctx.currentTime);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.08);
+                if (navigator.vibrate) navigator.vibrate(50);
+            } catch (e) {}
+        }
+
         function buatIdUnik(pic) {
             const cleanPic = (pic || "USR").replace(/[^a-zA-Z0-9]/g, "").substring(0, 4).toUpperCase();
             const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
             return `ID-${Date.now()}-${cleanPic}-${rand}`;
         }
 
-        // Helper Fetch Aman untuk Google Apps Script (Menghindari CORS Preflight & Mendukung Timeout)
         async function postGAS(payload, timeoutMs = 25000) {
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -645,27 +723,133 @@
             else if (type === "danger") el.classList.add("text-danger");
         }
 
+        // =========================================================================
+        // PEMINDAI BARCODE PRO: DUKUNGAN PENUH 1D & 2D + AKSELERASI HARDWARE IPHONE
+        // =========================================================================
         function bukaKamera() {
             document.getElementById('scannerModal').style.display = "flex";
-            if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+            document.getElementById('zoomControlRow').style.display = "none";
+            document.getElementById('btnTorch').style.display = "none";
+            isTorchOn = false;
+
+            // Dukungan Komprehensif Barcode 1D (Garis) dan 2D (QR, DataMatrix, PDF417, Aztec)
+            const format1Ddan2D = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
+                // Format 1D (Barcode Produk & Logistik)
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.CODE_93,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.ITF,
+                Html5QrcodeSupportedFormats.CODABAR,
+                // Format 2D (QR Code, DataMatrix Kemasan/Cukai, PDF417, Aztec)
+                Html5QrcodeSupportedFormats.QR_CODE,
+                Html5QrcodeSupportedFormats.DATA_MATRIX,
+                Html5QrcodeSupportedFormats.PDF_417,
+                Html5QrcodeSupportedFormats.AZTEC
+            ] : undefined;
+
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader", {
+                    formatsToSupport: format1Ddan2D,
+                    experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+                    verbose: false
+                });
+            }
+
+            const configKamera = {
+                fps: 24,
+                qrbox: function(viewfinderWidth, viewfinderHeight) {
+                    // Kotak pemindai hibrida (80% lebar x 62% tinggi) agar nyaman membaca barcode panjang (1D) maupun kotak (2D)
+                    const width = Math.floor(viewfinderWidth * 0.80);
+                    const height = Math.floor(Math.min(viewfinderHeight * 0.62, 220));
+                    return { width: Math.max(width, 220), height: Math.max(height, 150) };
+                },
+                aspectRatio: 1.333334,
+                disableFlip: false, // Aktifkan pembacaan orientasi fleksibel untuk kode 2D
+                videoConstraints: {
+                    facingMode: { ideal: "environment" },
+                    width: { min: 640, ideal: 1280, max: 1920 },
+                    height: { min: 480, ideal: 720, max: 1080 },
+                    focusMode: "continuous"
+                }
+            };
+
             html5QrCode.start(
-                { facingMode: "environment" }, 
-                { fps: 12, qrbox: { width: 250, height: 120 }, aspectRatio: 1.0 },
+                { facingMode: "environment" },
+                configKamera,
                 (decodedText) => {
+                    bunyiBeepScan();
                     tutupKamera();
-                    document.getElementById('kodeBarang').value = decodedText;
+                    document.getElementById('kodeBarang').value = decodedText.trim();
                     pencarianBarcode();
                 },
                 () => {}
-            ).catch(() => {
-                alert("Gagal mengakses kamera perangkat.");
+            ).then(() => {
+                cekFiturKameraLanjutan();
+            }).catch(() => {
+                alert("Gagal mengakses kamera perangkat. Pastikan izin kamera telah diberikan di pengaturan browser.");
                 tutupKamera();
             });
         }
 
+        function cekFiturKameraLanjutan() {
+            try {
+                const capabilities = html5QrCode.getRunningTrackCapabilities();
+                
+                if (capabilities && capabilities.zoom) {
+                    const zoomRow = document.getElementById('zoomControlRow');
+                    const slider = document.getElementById('zoomSlider');
+                    const minZ = capabilities.zoom.min || 1;
+                    const maxZ = Math.min(capabilities.zoom.max || 3, 4);
+                    slider.min = minZ;
+                    slider.max = maxZ;
+                    slider.step = capabilities.zoom.step || 0.1;
+                    
+                    const defaultZoom = (maxZ >= 1.5) ? 1.4 : minZ;
+                    slider.value = defaultZoom;
+                    document.getElementById('zoomValueText').innerText = Number(defaultZoom).toFixed(1) + "x";
+                    zoomRow.style.display = "flex";
+                    if (defaultZoom > 1) aturZoomKamera(defaultZoom);
+                }
+
+                if (capabilities && capabilities.torch) {
+                    const btnTorch = document.getElementById('btnTorch');
+                    btnTorch.style.display = "block";
+                    btnTorch.classList.remove("active");
+                    btnTorch.innerText = "Nyalakan Lampu Senter";
+                }
+            } catch (e) {}
+        }
+
+        function aturZoomKamera(nilaiZoom) {
+            const z = parseFloat(nilaiZoom);
+            document.getElementById('zoomValueText').innerText = z.toFixed(1) + "x";
+            try {
+                html5QrCode.applyVideoConstraints({ advanced: [{ zoom: z }] });
+            } catch (e) {}
+        }
+
+        function toggleSenterKamera() {
+            isTorchOn = !isTorchOn;
+            const btnTorch = document.getElementById('btnTorch');
+            try {
+                html5QrCode.applyVideoConstraints({ advanced: [{ torch: isTorchOn }] });
+                if (isTorchOn) {
+                    btnTorch.classList.add("active");
+                    btnTorch.innerText = "Matikan Lampu Senter";
+                } else {
+                    btnTorch.classList.remove("active");
+                    btnTorch.innerText = "Nyalakan Lampu Senter";
+                }
+            } catch (e) {}
+        }
+
         function tutupKamera() {
             document.getElementById('scannerModal').style.display = "none";
-            if (html5QrCode) {
+            if (html5QrCode && html5QrCode.isScanning) {
                 html5QrCode.stop().catch(() => {});
             }
         }
@@ -828,7 +1012,7 @@
         function prosesUpload() {
             const fileInput = document.getElementById('fileExcel');
             if (fileInput.files.length === 0) return setStatusMsg('uploadStatus', 'Pilih file Excel terlebih dahulu.', 'danger');
-            setStatusMsg('uploadStatus', 'Membuat lembar kerja laporan...', 'warning');
+            setStatusMsg('uploadStatus', 'Membuat Spreadsheet di Folder Audit & Membuka Akses SPV...', 'warning');
             
             const reader = new FileReader();
             reader.onload = async function(e) {
@@ -839,9 +1023,9 @@
                     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                     const selE5 = worksheet['E5'] ? worksheet['E5'].v : "WHOLESALE";
 
-                    const result = await postGAS({ action: 'upload_master', data: jsonData, gudang: selE5 }, 45000);
+                    const result = await postGAS({ action: 'upload_master', data: jsonData, gudang: selE5 }, 50000);
                     if (result.status === 'success') {
-                        setStatusMsg('uploadStatus', 'Sesi audit berhasil dibuat.', 'success');
+                        setStatusMsg('uploadStatus', 'Sesi audit berhasil dibuat di Folder Target.', 'success');
                         document.getElementById('spvResultArea').style.display = 'block';
                         document.getElementById('resultJobId').innerText = result.jobId;
                         document.getElementById('resultUrl').href = result.url;
@@ -887,11 +1071,9 @@
                     setTimeout(toggleSesiBox, 600);
                     document.getElementById('kodeBarang').focus();
 
-                    // Bersihkan timer lama (Mencegah Memory & Timer Leak)
                     if (queueSyncTimer) clearInterval(queueSyncTimer);
                     if (rekapSyncTimer) clearInterval(rekapSyncTimer);
 
-                    // JITTER ACAK (5.5 - 8.5 detik): Mencegah 20 perangkat menembak server pada milidetik yang sama
                     const randomQueueInterval = Math.floor(5500 + Math.random() * 3000);
                     const randomRekapInterval = Math.floor(55000 + Math.random() * 15000);
                     queueSyncTimer = setInterval(() => prosesAntreanSiluman(false), randomQueueInterval);
@@ -933,7 +1115,6 @@
             updateQueueUI();
             if (queue.length === 0) return;
 
-            // Ambil maksimal 40 data sekali kirim (Batching efisien)
             const batchToSend = queue.slice(0, 40);
             batchToSend.forEach(item => inFlightIds.add(item.id));
 
@@ -1009,7 +1190,7 @@
             if (!kode) return;
             const master = JSON.parse(localStorage.getItem('masterJob')) || [];
             const barang = master.find(b => String(b.kode).toLowerCase() === kode.toLowerCase());
-            setHasilCari(barang, "Barcode");
+            setHasilCari(barang, "Kode");
         }
 
         function jalankanAutocomplete(val) {
@@ -1101,7 +1282,6 @@
             };
 
             if (actionType === 'submit_scan') {
-                // Simpan Instan ke Antrean Lokal (0ms Latency untuk Retensi Cepat)
                 const queue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || [];
                 queue.push(payload);
                 localStorage.setItem('syncQueue_' + jobId, JSON.stringify(queue));
@@ -1115,12 +1295,10 @@
                 resetFormKhusus();
                 setStatusMsg('statusScan', `Tersimpan: ${nama} (Fisik: ${stokFisikNum})`, 'success');
 
-                // Jika antrean sudah mencapai 15 item, langsung picu pengiriman batch
                 if (queue.length >= 15) {
                     prosesAntreanSiluman(false);
                 }
             } else {
-                // Mode Edit Data
                 if (inFlightIds.has(idTransaksi)) {
                     return setStatusMsg('statusScan', 'Data sedang disinkronkan ke server, tunggu 2 detik lalu simpan ulang.', 'warning');
                 }
@@ -1331,7 +1509,6 @@
             flushForm();
         }
 
-        // Perbaikan Bug Panel SPV: Menggunakan postGAS (Fetch API) alih-alih google.script.run
         async function updateJSON() {
             const jobId = document.getElementById("inputJobIdSPV").value.trim().toUpperCase();
             if (!jobId) {
