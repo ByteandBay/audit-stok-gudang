@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Portal Audit Gudang</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -31,6 +31,7 @@
             background-color: var(--bg-body);
             color: var(--text-main);
             min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             justify-content: center;
             overflow-x: hidden;
@@ -63,8 +64,19 @@
             justify-content: center;
             cursor: pointer;
             padding: 0;
+            position: relative;
         }
         .btn-icon-nav:hover { background: rgba(255, 255, 255, 0.22); }
+        .nav-badge-dot {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #fbbf24;
+            display: none;
+        }
 
         /* Sidebar */
         .overlay {
@@ -78,12 +90,12 @@
         .overlay.active { display: block; }
         .sidebar {
             height: 100%;
-            width: 320px;
-            max-width: 85vw;
+            width: 330px;
+            max-width: 86vw;
             position: fixed;
             z-index: 200;
             top: 0;
-            left: -340px;
+            left: -350px;
             background-color: var(--surface);
             box-shadow: 4px 0 24px rgba(15, 23, 42, 0.18);
             transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -102,22 +114,39 @@
         .sidebar-header h3 { margin: 0; font-size: 15px; color: var(--primary); font-weight: 700; }
         .btn-close {
             background: #f1f5f9;
-            border: none;
+            border: 1px solid #e2e8f0;
             color: var(--text-main);
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
             font-size: 14px;
             font-weight: 700;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
         }
+        .btn-close:hover { background: var(--danger-soft); color: var(--danger); border-color: #fecaca; }
         .section-title {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: var(--text-muted);
-            margin: 20px 0 10px 0;
+            margin: 20px 0 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .live-pill {
+            background: var(--primary-soft);
+            color: var(--primary);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: none;
         }
 
         /* Main Container */
@@ -194,6 +223,13 @@
         .btn-primary:hover:not(:disabled) { background-color: var(--primary); }
         .btn-warning { background-color: var(--accent); color: #ffffff; }
         .btn-dark { background-color: var(--primary); color: #ffffff; }
+        .btn-outline {
+            background-color: #f8fafc;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 9px 12px;
+            font-size: 12px;
+        }
         .btn-toggle {
             width: auto;
             padding: 4px 10px;
@@ -375,6 +411,12 @@
             justify-content: space-between;
             align-items: center;
         }
+        .selisih-list-scroll {
+            max-height: 210px;
+            overflow-y: auto;
+            margin-top: 6px;
+            padding-right: 4px;
+        }
         .badge-count {
             background: #e2e8f0;
             color: var(--text-main);
@@ -383,61 +425,89 @@
             font-size: 11px;
             font-weight: 700;
         }
+        .badge-plus { background: #fef3c7; color: #92400e; }
+        .badge-minus { background: #fee2e2; color: #991b1b; }
         .selisih-item {
             font-size: 12px;
-            padding: 8px 0;
+            padding: 8px 4px;
             border-bottom: 1px dashed var(--border);
             cursor: pointer;
             color: var(--primary);
         }
-        .selisih-item:first-child { margin-top: 8px; border-top: 1px solid #e2e8f0; }
-        .selisih-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .selisih-item:first-child { border-top: 1px solid #e2e8f0; }
+        .selisih-item:last-child { border-bottom: none; padding-bottom: 2px; }
         .selisih-item:hover { background-color: var(--primary-soft); padding-left: 6px; border-radius: 4px; }
 
-        /* Scanner Modal & Kontrol Kamera Pro (1D & 2D Support) */
+        /* ==============================================================
+           MODAL KAMERA ANTI-TERTUTUP (SAFE-AREA IPHONE & COMPACT VIEW)
+           ============================================================== */
         .scanner-modal {
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.88);
-            z-index: 300;
+            background: rgba(15, 23, 42, 0.90);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
             display: none;
             align-items: center;
             justify-content: center;
-            padding: 16px;
+            padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom)) 14px;
         }
         .scanner-content {
             background: var(--surface);
-            padding: 18px;
-            border-radius: 12px;
+            padding: 14px 16px;
+            border-radius: 14px;
             width: 100%;
-            max-width: 420px;
-            position: relative;
-            text-align: center;
+            max-width: 400px;
+            max-height: 90dvh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
         }
-        .scan-mode-badge {
-            display: inline-block;
-            background: var(--primary-soft);
-            color: var(--primary);
-            font-size: 11px;
+        .scanner-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e2e8f0;
+            flex-shrink: 0;
+        }
+        .scanner-header-left {
+            text-align: left;
+        }
+        .scanner-header-left h3 {
+            margin: 0;
+            font-size: 15px;
             font-weight: 700;
-            padding: 4px 10px;
-            border-radius: 20px;
-            margin-bottom: 6px;
+            color: var(--text-main);
         }
+        .scanner-header-left span {
+            font-size: 11px;
+            color: var(--primary-light);
+            font-weight: 600;
+        }
+        /* Pembatas Tinggi Video agar Tidak Mendorong Header Keluar Layar iPhone */
         #reader {
             width: 100%;
-            border-radius: 8px;
+            max-height: 46dvh;
+            border-radius: 10px;
             overflow: hidden;
-            margin: 6px 0 10px 0;
+            margin: 10px 0 8px 0;
             background: #000;
+            position: relative;
+            flex-shrink: 1;
+        }
+        #reader video {
+            max-height: 46dvh !important;
+            object-fit: cover !important;
+            width: 100% !important;
         }
         .camera-controls {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            margin-top: 8px;
-            padding-top: 10px;
-            border-top: 1px solid #e2e8f0;
+            gap: 8px;
+            padding-top: 6px;
+            flex-shrink: 0;
         }
         .zoom-row {
             display: none;
@@ -446,36 +516,58 @@
             font-size: 12px;
             font-weight: 600;
             color: var(--text-main);
+            background: #f8fafc;
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
         }
         .zoom-row input[type="range"] {
             flex: 1;
             padding: 0;
+            height: 6px;
             accent-color: var(--primary-light);
+        }
+        .scanner-action-row {
+            display: flex;
+            gap: 8px;
         }
         .btn-torch {
             display: none;
             background: #f1f5f9;
             color: var(--text-main);
-            padding: 8px 12px;
+            padding: 10px 12px;
             font-size: 12px;
-            border-radius: 6px;
+            border-radius: 8px;
+            flex: 1;
         }
         .btn-torch.active {
             background: var(--accent);
             color: #fff;
         }
+        .btn-close-bottom {
+            background: var(--danger-soft);
+            color: var(--danger);
+            padding: 10px 12px;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 8px;
+            flex: 1;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Modal Kamera Barcode (Mendukung Penuh Kode 1D Batang & 2D QR/DataMatrix) -->
+    <!-- Modal Kamera Barcode (Desain Compact Anti-Tertutup untuk iPhone & Android) -->
     <div id="scannerModal" class="scanner-modal">
         <div class="scanner-content">
-            <div class="card-header" style="margin-bottom: 4px;">
-                <h3 class="card-title">Pemindai Barcode 1D & 2D</h3>
-                <button class="btn-close" onclick="tutupKamera()" aria-label="Tutup">X</button>
+            <div class="scanner-header">
+                <div class="scanner-header-left">
+                    <h3>Pemindai Barcode 1D & 2D</h3>
+                    <span>Mendukung Garis (1D) & QR / DataMatrix (2D)</span>
+                </div>
+                <button type="button" class="btn-close" onclick="tutupKamera()" aria-label="Tutup">X</button>
             </div>
-            <div class="scan-mode-badge">Mendukung Barcode Garis (1D) & QR / DataMatrix (2D)</div>
+
             <div id="reader"></div>
             
             <div class="camera-controls">
@@ -484,19 +576,23 @@
                     <input type="range" id="zoomSlider" min="1" max="3" step="0.1" value="1" oninput="aturZoomKamera(this.value)">
                     <span id="zoomValueText">1.0x</span>
                 </div>
-                <button type="button" id="btnTorch" class="btn-torch" onclick="toggleSenterKamera()">Nyalakan Lampu Senter</button>
+                <div class="scanner-action-row">
+                    <button type="button" id="btnTorch" class="btn-torch" onclick="toggleSenterKamera()">Lampu Senter</button>
+                    <button type="button" class="btn-close-bottom" onclick="tutupKamera()">Tutup Kamera</button>
+                </div>
             </div>
 
-            <p style="font-size:11px; color:var(--text-muted); margin:8px 0 0 0;">
-                Tips iPhone: Jaga jarak 15 cm dan gunakan Zoom 1.4x-1.8x agar kode 1D maupun 2D kecil langsung terkunci fokus.
+            <p style="font-size:11px; color:var(--text-muted); margin:6px 0 0 0; line-height:1.3;">
+                Jaga jarak 15 cm dan gunakan Zoom 1.4x agar fokus kamera mengunci instan.
             </p>
         </div>
     </div>
 
-    <!-- Top Navbar (Hanya Ikon Tanpa Teks Redundan) -->
+    <!-- Top Navbar -->
     <div class="navbar">
         <button class="btn-icon-nav" onclick="toggleSidebar()" aria-label="Menu">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            <span id="navBadgeDot" class="nav-badge-dot"></span>
         </button>
         <h2>Portal Audit Gudang</h2>
         <div style="width: 36px;"></div>
@@ -511,24 +607,36 @@
             <button class="btn-close" onclick="toggleSidebar()">X</button>
         </div>
         
-        <div class="section-title" style="margin-top:0;">Menu Staff</div>
-        <p style="font-size:12px; color:var(--text-muted); margin-top:0;">Tarik data selisih terbaru dari Job ID yang aktif.</p>
-        <button id="btnMuatSelisih" class="btn-warning" onclick="muatDataSelisih()">Sinkronisasi & Cek Selisih</button>
+        <div class="section-title" style="margin-top:0;">
+            <span>Monitor Selisih</span>
+            <span id="statusLiveSelisih" class="live-pill">Realtime Aktif</span>
+        </div>
+        <p style="font-size:11px; color:var(--text-muted); margin:0 0 10px 0;">
+            Data selisih dihitung otomatis secara instan dari memori perangkat dan sinkronisasi latar belakang.
+        </p>
         
-        <div id="areaSelisih" style="display:none; margin-top:14px;">
+        <div id="areaSelisih" style="margin-bottom:10px;">
             <details class="selisih-box">
-                <summary><span>Item Lebih (Plus)</span> <span class="badge-count" id="cntPlus">0</span></summary>
-                <div id="listPlus"></div>
+                <summary><span>Item Lebih (Plus)</span> <span class="badge-count badge-plus" id="cntPlus">0</span></summary>
+                <div id="listPlus" class="selisih-list-scroll">
+                    <div style="font-size:12px; color:var(--text-muted); padding:8px 0;">Kunci Job ID terlebih dahulu.</div>
+                </div>
             </details>
             <details class="selisih-box">
-                <summary><span>Item Kurang (Minus)</span> <span class="badge-count" id="cntMinus">0</span></summary>
-                <div id="listMinus"></div>
+                <summary><span>Item Kurang (Minus)</span> <span class="badge-count badge-minus" id="cntMinus">0</span></summary>
+                <div id="listMinus" class="selisih-list-scroll">
+                    <div style="font-size:12px; color:var(--text-muted); padding:8px 0;">Kunci Job ID terlebih dahulu.</div>
+                </div>
             </details>
             <details class="selisih-box">
                 <summary><span>Belum Dihitung</span> <span class="badge-count" id="cntBelum">0</span></summary>
-                <div id="listBelum"></div>
+                <div id="listBelum" class="selisih-list-scroll">
+                    <div style="font-size:12px; color:var(--text-muted); padding:8px 0;">Kunci Job ID terlebih dahulu.</div>
+                </div>
             </details>
         </div>
+
+        <button id="btnMuatSelisih" class="btn-outline" onclick="paksaSyncRekapServer()">Segarkan Rekap Tim dari Server</button>
 
         <div class="section-title">Panel Supervisor (SPV)</div>
         <div id="spvPinArea">
@@ -608,7 +716,6 @@
                 <label>Barcode Barang (1D / 2D)</label>
                 <div class="input-group-row">
                     <input type="text" id="kodeBarang" placeholder="Scan kode 1D/2D atau ketik manual..." onkeypress="handleEnterScan(event)" onchange="pencarianBarcode()">
-                    <!-- Hanya Ikon Kamera -->
                     <button class="btn-icon-only" onclick="bukaKamera()" title="Buka Kamera Barcode 1D/2D" aria-label="Kamera">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                     </button>
@@ -619,7 +726,6 @@
                 <label>Nama Barang</label>
                 <div class="autocomplete-container">
                     <input type="text" id="namaBarang" placeholder="Ketik untuk mencari nama barang..." oninput="jalankanAutocomplete(this.value)" autocomplete="off" style="padding-right: 40px;">
-                    <!-- Hanya Ikon Bersihkan -->
                     <button type="button" class="btn-clear-input" onclick="flushForm()" title="Bersihkan Kolom" aria-label="Bersihkan">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
@@ -724,7 +830,7 @@
         }
 
         // =========================================================================
-        // PEMINDAI BARCODE PRO: DUKUNGAN PENUH 1D & 2D + AKSELERASI HARDWARE IPHONE
+        // PEMINDAI BARCODE PRO: DUKUNGAN 1D & 2D + LAYOUT COMPACT ANTI-TERTUTUP
         // =========================================================================
         function bukaKamera() {
             document.getElementById('scannerModal').style.display = "flex";
@@ -732,9 +838,7 @@
             document.getElementById('btnTorch').style.display = "none";
             isTorchOn = false;
 
-            // Dukungan Komprehensif Barcode 1D (Garis) dan 2D (QR, DataMatrix, PDF417, Aztec)
             const format1Ddan2D = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
-                // Format 1D (Barcode Produk & Logistik)
                 Html5QrcodeSupportedFormats.CODE_128,
                 Html5QrcodeSupportedFormats.EAN_13,
                 Html5QrcodeSupportedFormats.EAN_8,
@@ -744,7 +848,6 @@
                 Html5QrcodeSupportedFormats.UPC_E,
                 Html5QrcodeSupportedFormats.ITF,
                 Html5QrcodeSupportedFormats.CODABAR,
-                // Format 2D (QR Code, DataMatrix Kemasan/Cukai, PDF417, Aztec)
                 Html5QrcodeSupportedFormats.QR_CODE,
                 Html5QrcodeSupportedFormats.DATA_MATRIX,
                 Html5QrcodeSupportedFormats.PDF_417,
@@ -762,13 +865,13 @@
             const configKamera = {
                 fps: 24,
                 qrbox: function(viewfinderWidth, viewfinderHeight) {
-                    // Kotak pemindai hibrida (80% lebar x 62% tinggi) agar nyaman membaca barcode panjang (1D) maupun kotak (2D)
-                    const width = Math.floor(viewfinderWidth * 0.80);
-                    const height = Math.floor(Math.min(viewfinderHeight * 0.62, 220));
-                    return { width: Math.max(width, 220), height: Math.max(height, 150) };
+                    const width = Math.floor(viewfinderWidth * 0.78);
+                    const height = Math.floor(Math.min(viewfinderHeight * 0.58, 190));
+                    return { width: Math.max(width, 200), height: Math.max(height, 130) };
                 },
-                aspectRatio: 1.333334,
-                disableFlip: false, // Aktifkan pembacaan orientasi fleksibel untuk kode 2D
+                // Rasio 4:3 atau 1:1 menjaga video tidak terlalu panjang secara vertikal di iPhone
+                aspectRatio: 1.0,
+                disableFlip: false,
                 videoConstraints: {
                     facingMode: { ideal: "environment" },
                     width: { min: 640, ideal: 1280, max: 1920 },
@@ -819,7 +922,7 @@
                     const btnTorch = document.getElementById('btnTorch');
                     btnTorch.style.display = "block";
                     btnTorch.classList.remove("active");
-                    btnTorch.innerText = "Nyalakan Lampu Senter";
+                    btnTorch.innerText = "Lampu Senter";
                 }
             } catch (e) {}
         }
@@ -839,10 +942,10 @@
                 html5QrCode.applyVideoConstraints({ advanced: [{ torch: isTorchOn }] });
                 if (isTorchOn) {
                     btnTorch.classList.add("active");
-                    btnTorch.innerText = "Matikan Lampu Senter";
+                    btnTorch.innerText = "Matikan Senter";
                 } else {
                     btnTorch.classList.remove("active");
-                    btnTorch.innerText = "Nyalakan Lampu Senter";
+                    btnTorch.innerText = "Lampu Senter";
                 }
             } catch (e) {}
         }
@@ -855,8 +958,15 @@
         }
 
         function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('active');
+            const sidebar = document.getElementById('sidebar');
+            const isOpening = !sidebar.classList.contains('active');
+            sidebar.classList.toggle('active');
             document.getElementById('overlay').classList.toggle('active');
+            
+            // Hitung ulang selisih secara instan (0 beban server) setiap kali sidebar dibuka
+            if (isOpening) {
+                hitungSelisihRealtimeLokal();
+            }
         }
 
         function toggleSesiBox() {
@@ -900,32 +1010,77 @@
             }
         }
 
-        async function muatDataSelisih() {
+        // =========================================================================
+        // KALKULASI SELISIH REALTIME LOKAL (0 REQUEST KE SERVER - SUPER RINGAN)
+        // =========================================================================
+        function hitungSelisihRealtimeLokal() {
+            const jobId = document.getElementById('jobIdStaff').value.trim().toUpperCase();
+            const isLocked = document.getElementById('btnLock').disabled;
+            if (!isLocked || !jobId) return;
+
+            const master = JSON.parse(localStorage.getItem('masterJob')) || [];
+            const rekap = JSON.parse(localStorage.getItem('rekapFisik_' + jobId)) || {};
+            
+            const plus = [];
+            const minus = [];
+            const belum = [];
+
+            for (let i = 0; i < master.length; i++) {
+                const item = master[i];
+                const kode = String(item.kode);
+                const target = parseFloat(item.kuantitas) || 0;
+                const fisik = parseFloat(rekap[kode]) || 0;
+                const selisih = fisik - target;
+
+                const obj = {
+                    kode: kode,
+                    nama: item.nama,
+                    target: target,
+                    fisik: fisik,
+                    selisih: selisih
+                };
+
+                if (fisik === 0 && target > 0) {
+                    belum.push(obj);
+                } else if (selisih > 0) {
+                    plus.push(obj);
+                } else if (selisih < 0) {
+                    minus.push(obj);
+                }
+            }
+
+            renderSelisihKategori('listPlus', 'cntPlus', plus);
+            renderSelisihKategori('listMinus', 'cntMinus', minus);
+            renderSelisihKategori('listBelum', 'cntBelum', belum);
+
+            // Tampilkan titik indikator di tombol menu jika ada item Plus atau Minus
+            const dot = document.getElementById('navBadgeDot');
+            if (plus.length > 0 || minus.length > 0) {
+                dot.style.display = "block";
+            } else {
+                dot.style.display = "none";
+            }
+
+            const pill = document.getElementById('statusLiveSelisih');
+            const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            pill.innerText = `Live ${nowStr}`;
+        }
+
+        // Fungsi jika pengguna ingin memaksa tarik rekap terbaru dari tim lain detik itu juga
+        async function paksaSyncRekapServer() {
             const jobId = document.getElementById('jobIdStaff').value.trim().toUpperCase();
             const isLocked = document.getElementById('btnLock').disabled;
             if (!isLocked || !jobId) return alert("Kunci Job ID terlebih dahulu di layar utama.");
-            
+
             const btn = document.getElementById('btnMuatSelisih');
             btn.disabled = true;
-            btn.innerText = "Memuat Data Selisih...";
-            
-            try {
-                const result = await postGAS({ action: 'get_selisih_data', jobId: jobId });
-                if (result.status === 'success') {
-                    localStorage.setItem('rekapFisik_' + jobId, JSON.stringify(result.rekapFisik));
-                    document.getElementById('areaSelisih').style.display = 'block';
-                    renderSelisihKategori('listPlus', 'cntPlus', result.plus);
-                    renderSelisihKategori('listMinus', 'cntMinus', result.minus);
-                    renderSelisihKategori('listBelum', 'cntBelum', result.belum);
-                } else {
-                    alert("Gagal memuat: " + result.message);
-                }
-            } catch (e) {
-                alert("Koneksi ke server sedang padat. Silakan coba beberapa saat lagi.");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Sinkronisasi & Cek Selisih";
-            }
+            btn.innerText = "Menyegarkan dari Server...";
+
+            await prosesAntreanSiluman(false);
+            await tarikRekapSiluman(true);
+
+            btn.disabled = false;
+            btn.innerText = "Segarkan Rekap Tim dari Server";
         }
 
         function renderSelisihKategori(elementId, countId, dataArray) {
@@ -934,12 +1089,18 @@
             if (dataArray.length === 0) {
                 html = '<div style="font-size:12px; color:var(--text-muted); padding:8px 0;">Tidak ada item pada kategori ini.</div>';
             } else {
-                dataArray.forEach(item => {
+                // Batasi render DOM maksimal 150 item pertama per kategori agar scroll HP tetap ringan
+                const tampil = dataArray.slice(0, 150);
+                tampil.forEach(item => {
+                    const tanda = item.selisih > 0 ? `+${item.selisih}` : item.selisih;
                     html += `<div class="selisih-item" onclick="klikItemSelisih('${item.kode}')">
                         <strong>${item.nama}</strong><br>
-                        <span style="color:var(--text-muted);">Target: ${item.target} | Fisik: ${item.fisik} | Selisih: <strong style="color:var(--danger);">${item.selisih}</strong></span>
+                        <span style="color:var(--text-muted);">Target: ${item.target} | Fisik: ${item.fisik} | Selisih: <strong style="color:var(--danger);">${tanda}</strong></span>
                     </div>`;
                 });
+                if (dataArray.length > 150) {
+                    html += `<div style="font-size:11px; color:var(--text-muted); padding:6px 0;">+${dataArray.length - 150} item lainnya...</div>`;
+                }
             }
             document.getElementById(elementId).innerHTML = html;
         }
@@ -1067,17 +1228,21 @@
                     document.getElementById('areaHistori').style.display = "block";
                     
                     renderHistori();
-                    updateQueueUI(); 
+                    updateQueueUI();
+                    hitungSelisihRealtimeLokal(); // Langsung hitung selisih realtime saat sesi dikunci
+                    
                     setTimeout(toggleSesiBox, 600);
                     document.getElementById('kodeBarang').focus();
 
                     if (queueSyncTimer) clearInterval(queueSyncTimer);
                     if (rekapSyncTimer) clearInterval(rekapSyncTimer);
 
+                    // Sinkronisasi antrean dengan jitter acak (5.5 - 8.5 detik)
                     const randomQueueInterval = Math.floor(5500 + Math.random() * 3000);
-                    const randomRekapInterval = Math.floor(55000 + Math.random() * 15000);
+                    // Sinkronisasi rekap latar belakang ringan (25 - 35 detik, di-cache oleh RAM Server)
+                    const randomRekapInterval = Math.floor(25000 + Math.random() * 10000);
                     queueSyncTimer = setInterval(() => prosesAntreanSiluman(false), randomQueueInterval);
-                    rekapSyncTimer = setInterval(tarikRekapSiluman, randomRekapInterval);
+                    rekapSyncTimer = setInterval(() => tarikRekapSiluman(false), randomRekapInterval);
                 } else {
                     btnLock.disabled = false;
                     setStatusMsg('lockStatus', 'Job ID tidak ditemukan di server.', 'danger');
@@ -1138,8 +1303,8 @@
             }
         }
 
-        async function tarikRekapSiluman() {
-            if (isSyncingRekap || isSyncingQueue) return; 
+        async function tarikRekapSiluman(force = false) {
+            if ((isSyncingRekap || isSyncingQueue) && !force) return; 
             const jobId = document.getElementById('jobIdStaff').value.trim().toUpperCase();
             if (!jobId) return;
             
@@ -1147,11 +1312,22 @@
             try {
                 const result = await postGAS({ action: 'sync_rekap', jobId: jobId });
                 if (result.status === 'success') {
-                    localStorage.setItem('rekapFisik_' + jobId, JSON.stringify(result.rekapFisik));
+                    // Gabungkan rekap server dengan antrean lokal yang belum terkirim agar akurat 100%
+                    const rekapServer = result.rekapFisik || {};
+                    const queue = JSON.parse(localStorage.getItem('syncQueue_' + jobId)) || [];
+                    queue.forEach(q => {
+                        const k = String(q.kode);
+                        rekapServer[k] = (parseFloat(rekapServer[k]) || 0) + (parseFloat(q.stokFisik) || 0);
+                    });
+
+                    localStorage.setItem('rekapFisik_' + jobId, JSON.stringify(rekapServer));
+                    
                     const curKode = document.getElementById('kodeBarang').value.trim();
                     if (curKode && !editModeId) {
                         hitungUlangSisaTargetLokal(curKode);
                     }
+                    // Perbarui tampilan daftar selisih secara otomatis di latar belakang
+                    hitungSelisihRealtimeLokal();
                 }
             } catch (e) {} finally {
                 isSyncingRekap = false;
@@ -1292,6 +1468,7 @@
 
                 simpanHistoriLokal(payload, actionType);
                 updateQueueUI();
+                hitungSelisihRealtimeLokal(); // Update selisih realtime (0ms)
                 resetFormKhusus();
                 setStatusMsg('statusScan', `Tersimpan: ${nama} (Fisik: ${stokFisikNum})`, 'success');
 
@@ -1319,13 +1496,14 @@
                     localStorage.setItem('rekapFisik_' + jobId, JSON.stringify(rekap));
 
                     simpanHistoriLokal(payload, actionType);
+                    hitungSelisihRealtimeLokal();
                     if (globalHistoryView) klikItemSelisih(payload.kode);
                     else resetFormKhusus();
                 } else {
                     try {
                         const result = await postGAS(payload);
                         if (result.status === 'success') {
-                            tarikRekapSiluman();
+                            await tarikRekapSiluman(true);
                             simpanHistoriLokal(payload, actionType);
                             if (globalHistoryView) klikItemSelisih(payload.kode);
                             else resetFormKhusus();
@@ -1458,6 +1636,7 @@
                     filterHistori();
                 }
                 updateQueueUI();
+                hitungSelisihRealtimeLokal();
             } else {
                 try {
                     const result = await postGAS({ action: 'delete_scan', id: id, jobId: jobId });
@@ -1472,7 +1651,7 @@
                         } else {
                             filterHistori();
                         }
-                        tarikRekapSiluman();
+                        await tarikRekapSiluman(true);
                     } else {
                         alert("Gagal menghapus: " + result.message);
                         if (btnDel) { btnDel.innerText = "Hapus"; btnDel.disabled = false; }
